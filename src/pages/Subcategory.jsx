@@ -1,0 +1,1801 @@
+import React, { useState, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  MaterialReactTable,
+  useMaterialReactTable,
+} from "material-react-table";
+import {
+  Box,
+  Typography,
+  Button,
+  Paper,
+  Chip,
+  TextField,
+  InputAdornment,
+  Avatar,
+  Switch,
+  IconButton,
+  Stack,
+  Breadcrumbs,
+  Link,
+  Menu,
+  MenuItem,
+  ListItemText,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+} from "@mui/material";
+import {
+  ArrowBack,
+  KeyboardArrowDown,
+  SwapVert,
+  Add,
+  CheckroomOutlined,
+  TuneOutlined,
+  OpenInNew,
+  Search,
+  FilterList,
+  DragIndicator,
+  ImageOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  InfoOutlined,
+  Close,
+  LockOutlined,
+  CloudUploadOutlined,
+  ExpandMore,
+  Check,
+} from "@mui/icons-material";
+
+const ROOT_CATEGORIES_DATA = [
+  {
+    id: 1,
+    title: "T-Shirts",
+    slug: "t-shirts",
+    deptCode: "04",
+    departmentsLabel: "Women, Men Collections",
+    skuPrefix: "TSH-",
+    subcategories: [
+      {
+        id: 101,
+        rank: 1,
+        name: "Oversized",
+        slug: "/t-shirts/oversized",
+        skuCode: "TSH-OVR",
+        itemsCount: 68,
+        status: true,
+        isFeatured: true,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1583743814966-8936f5b7be1a?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?auto=format&fit=crop&w=400&q=80",
+        tagline:
+          "Boxy drape & heavyweight architectural cuts with dropped shoulders.",
+        seoTitle: "Oversized Luxury T-Shirts | Atelier Studio",
+        seoDescription: "Explore heavyweight boxy drape oversized tees.",
+      },
+      {
+        id: 102,
+        rank: 2,
+        name: "Crewneck",
+        slug: "/t-shirts/crewneck",
+        skuCode: "TSH-CRW",
+        itemsCount: 54,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+        tagline: "Everyday combed organic cotton essentials with ribbed collars.",
+        seoTitle: "Crewneck Essentials | Atelier Studio",
+        seoDescription: "Refined organic cotton crewneck tees.",
+      },
+      {
+        id: 103,
+        rank: 3,
+        name: "Graphic",
+        slug: "/t-shirts/graphic",
+        skuCode: "TSH-GRP",
+        itemsCount: 39,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?auto=format&fit=crop&w=400&q=80",
+        tagline: "Seasonal studio screenprints and archival editorial typography.",
+        seoTitle: "Graphic Editorial Tees | Atelier Studio",
+        seoDescription: "Limited run screenprinted studio graphics.",
+      },
+      {
+        id: 104,
+        rank: 4,
+        name: "Polo",
+        slug: "/t-shirts/polo",
+        skuCode: "TSH-PLO",
+        itemsCount: 23,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1586363104862-3a5e2ab60d99?auto=format&fit=crop&w=400&q=80",
+        tagline: "Structured pique knit collars with concealed placket closures.",
+        seoTitle: "Knit & Pique Polos | Atelier Studio",
+        seoDescription: "Tailored knit polos for modern layering.",
+      },
+    ],
+  },
+  {
+    id: 2,
+    title: "Shirts & Blouses",
+    slug: "shirts",
+    deptCode: "02",
+    departmentsLabel: "Men, Women Collections",
+    skuPrefix: "SHT-",
+    subcategories: [
+      {
+        id: 201,
+        rank: 1,
+        name: "Oxford Button-Down",
+        slug: "/shirts/oxford-button-down",
+        skuCode: "SHT-OXF",
+        itemsCount: 19,
+        status: true,
+        isFeatured: true,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=400&q=80",
+        tagline: "Crisp Italian cotton poplin and brushed Oxford weaves.",
+        seoTitle: "Oxford Button-Down Shirts | Atelier Studio",
+        seoDescription: "Tailored Oxford shirts.",
+      },
+      {
+        id: 202,
+        rank: 2,
+        name: "Silk & Satin Blouses",
+        slug: "/shirts/silk-blouses",
+        skuCode: "SHT-SLK",
+        itemsCount: 14,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1564257631407-4deb1f99d992?auto=format&fit=crop&w=400&q=80",
+        tagline: "Fluid mulberry silk silhouettes with French cuffs.",
+        seoTitle: "Silk Blouses | Atelier Studio",
+        seoDescription: "Luxury mulberry silk blouses.",
+      },
+      {
+        id: 203,
+        rank: 3,
+        name: "Resort Camp Collar",
+        slug: "/shirts/camp-collar",
+        skuCode: "SHT-CMP",
+        itemsCount: 9,
+        status: false,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?auto=format&fit=crop&w=400&q=80",
+        tagline: "Relaxed short-sleeve linen blends for warm-weather edits.",
+        seoTitle: "Resort Camp Collar Shirts | Atelier Studio",
+        seoDescription: "Relaxed linen camp collar shirts.",
+      },
+    ],
+  },
+  {
+    id: 3,
+    title: "Trousers & Slacks",
+    slug: "trousers",
+    deptCode: "03",
+    departmentsLabel: "Men, Women, Unisex Collections",
+    skuPrefix: "TRS-",
+    subcategories: [
+      {
+        id: 301,
+        rank: 1,
+        name: "Pleated Tailored",
+        slug: "/trousers/pleated-tailored",
+        skuCode: "TRS-PLT",
+        itemsCount: 28,
+        status: true,
+        isFeatured: true,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=400&q=80",
+        tagline: "Double-pleated virgin wool trousers with wide leg drape.",
+        seoTitle: "Pleated Tailored Trousers | Atelier Studio",
+        seoDescription: "Virgin wool pleated trousers.",
+      },
+      {
+        id: 302,
+        rank: 2,
+        name: "Utility & Cargo",
+        slug: "/trousers/utility-cargo",
+        skuCode: "TRS-CRG",
+        itemsCount: 21,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1517438476312-10d79c077509?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1517438476312-10d79c077509?auto=format&fit=crop&w=400&q=80",
+        tagline: "Technical ripstop cotton trousers with articulated knees.",
+        seoTitle: "Utility & Cargo Trousers | Atelier Studio",
+        seoDescription: "Technical cotton cargo trousers.",
+      },
+    ],
+  },
+  {
+    id: 4,
+    title: "Outerwear & Coats",
+    slug: "outerwear",
+    deptCode: "01",
+    departmentsLabel: "Women, Unisex Collections",
+    skuPrefix: "OUT-",
+    subcategories: [
+      {
+        id: 401,
+        rank: 1,
+        name: "Wool Overcoats",
+        slug: "/outerwear/wool-overcoats",
+        skuCode: "OUT-WOL",
+        itemsCount: 22,
+        status: true,
+        isFeatured: true,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=400&q=80",
+        tagline: "Double-faced cashmere and melton wool full-length coats.",
+        seoTitle: "Wool Overcoats | Atelier Studio",
+        seoDescription: "Full-length cashmere and wool coats.",
+      },
+      {
+        id: 402,
+        rank: 2,
+        name: "Trench & Rainwear",
+        slug: "/outerwear/trench-rainwear",
+        skuCode: "OUT-TRN",
+        itemsCount: 16,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&w=400&q=80",
+        tagline: "Water-repellent bonded gabardine trenches with storm flaps.",
+        seoTitle: "Trench & Rainwear | Atelier Studio",
+        seoDescription: "Bonded gabardine trench coats.",
+      },
+    ],
+  },
+  {
+    id: 5,
+    title: "Knitwear",
+    slug: "knitwear",
+    deptCode: "05",
+    departmentsLabel: "Women, Men Collections",
+    skuPrefix: "KNT-",
+    subcategories: [
+      {
+        id: 501,
+        rank: 1,
+        name: "Merino Crewnecks",
+        slug: "/knitwear/merino-crewnecks",
+        skuCode: "KNT-MRN",
+        itemsCount: 18,
+        status: true,
+        isFeatured: true,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=400&q=80",
+        tagline: "Fine-gauge 14gg extra-fine Australian merino sweaters.",
+        seoTitle: "Merino Crewnecks | Atelier Studio",
+        seoDescription: "Extra-fine merino wool knitwear.",
+      },
+      {
+        id: 502,
+        rank: 2,
+        name: "Chunky Cardigans",
+        slug: "/knitwear/chunky-cardigans",
+        skuCode: "KNT-CRD",
+        itemsCount: 11,
+        status: true,
+        isFeatured: false,
+        thumbnailUrl:
+          "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=400&q=80",
+        inspectorPreviewUrl:
+          "https://images.unsplash.com/photo-1434389677669-e08b4cac3105?auto=format&fit=crop&w=400&q=80",
+        tagline: "Ribbed fisherman-knit cardigans with horn buttons.",
+        seoTitle: "Chunky Cardigans | Atelier Studio",
+        seoDescription: "Ribbed fisherman-knit cardigans.",
+      },
+    ],
+  },
+];
+
+export default function Subcategories() {
+  const navigate = useNavigate();
+
+  // Store all categories in state so edits persist when switching categories in the dropdown
+  const [allCategories, setAllCategories] = useState(ROOT_CATEGORIES_DATA);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(1);
+
+  // Header Category Dropdown Menu Anchor
+  const [categoryMenuAnchor, setCategoryMenuAnchor] = useState(null);
+  const categoryMenuOpen = Boolean(categoryMenuAnchor);
+
+  const currentCategory = useMemo(
+    () =>
+      allCategories.find((c) => c.id === selectedCategoryId) ||
+      allCategories[0],
+    [allCategories, selectedCategoryId]
+  );
+
+  const subcategories = currentCategory.subcategories;
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusTab, setStatusTab] = useState("ALL"); // ALL | ACTIVE | DRAFT
+  const [sortAsc, setSortAsc] = useState(true);
+
+  // Right Inspector State
+  const [inspectorItem, setInspectorItem] = useState(
+    ROOT_CATEGORIES_DATA[0].subcategories[0]
+  );
+
+  // Add New Subcategory Modal State
+  const [addOpen, setAddOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newSku, setNewSku] = useState("");
+  const [newTagline, setNewTagline] = useState("");
+
+  // Switch Root Category from Dropdown
+  const handleSelectCategory = (cat) => {
+    setSelectedCategoryId(cat.id);
+    setInspectorItem(cat.subcategories[0] || null);
+    setSearchQuery("");
+    setStatusTab("ALL");
+    setCategoryMenuAnchor(null);
+  };
+
+  // Helper to update current category's subcategories list
+  const updateCurrentSubcategories = (updaterFn) => {
+    setAllCategories((prev) =>
+      prev.map((cat) =>
+        cat.id === currentCategory.id
+          ? { ...cat, subcategories: updaterFn(cat.subcategories) }
+          : cat
+      )
+    );
+  };
+
+  // Counts for Filter Tabs
+  const activeCount = subcategories.filter((s) => s.status).length;
+  const draftCount = subcategories.filter((s) => !s.status).length;
+  const totalProducts = subcategories.reduce((sum, s) => sum + s.itemsCount, 0);
+
+  // Filtered & Ranked Data
+  const filteredSubcategories = useMemo(() => {
+    return subcategories
+      .filter((item) => {
+        const q = searchQuery.toLowerCase();
+        const matchesSearch =
+          item.name.toLowerCase().includes(q) ||
+          item.slug.toLowerCase().includes(q) ||
+          item.skuCode.toLowerCase().includes(q);
+
+        const matchesTab =
+          statusTab === "ALL" ||
+          (statusTab === "ACTIVE" && item.status) ||
+          (statusTab === "DRAFT" && !item.status);
+
+        return matchesSearch && matchesTab;
+      })
+      .sort((a, b) => (sortAsc ? a.rank - b.rank : b.rank - a.rank));
+  }, [subcategories, searchQuery, statusTab, sortAsc]);
+
+  const handleToggleStatus = (id) => {
+    updateCurrentSubcategories((list) =>
+      list.map((item) =>
+        item.id === id ? { ...item, status: !item.status } : item
+      )
+    );
+  };
+
+  const handleDeleteSubcategory = (id) => {
+    updateCurrentSubcategories((list) => list.filter((item) => item.id !== id));
+    if (inspectorItem?.id === id) {
+      setInspectorItem(null);
+    }
+  };
+
+  // Material React Table Columns
+  const columns = useMemo(
+    () => [
+      {
+        accessorKey: "rank",
+        header: "RANK",
+        size: 70,
+        Cell: ({ row }) => (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
+            <DragIndicator sx={{ fontSize: 16, color: "#9ca3af" }} />
+            <Typography variant="body2" fontWeight={700} color="#111827">
+              {row.original.rank}
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        accessorKey: "name",
+        header: "SUBCATEGORY & VISUAL",
+        size: 215,
+        Cell: ({ row }) => {
+          const item = row.original;
+          return (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Box sx={{ position: "relative", flexShrink: 0 }}>
+                <Avatar
+                  variant="rounded"
+                  src={item.thumbnailUrl}
+                  alt={item.name}
+                  sx={{
+                    width: 46,
+                    height: 46,
+                    borderRadius: 2,
+                    bgcolor: "#f3f4f6",
+                  }}
+                />
+                <Box
+                  sx={{
+                    position: "absolute",
+                    bottom: 2,
+                    right: 2,
+                    width: 15,
+                    height: 15,
+                    borderRadius: 0.8,
+                    backgroundColor: "rgba(17, 24, 39, 0.82)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <ImageOutlined sx={{ fontSize: 10, color: "#fff" }} />
+                </Box>
+              </Box>
+
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.7 }}>
+                  <Typography variant="body2" fontWeight={700} color="#111827">
+                    {item.name}
+                  </Typography>
+                  {item.isFeatured && (
+                    <Box
+                      sx={{
+                        width: 6,
+                        height: 6,
+                        borderRadius: "50%",
+                        bgcolor: "#c2410c",
+                      }}
+                    />
+                  )}
+                </Box>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "#6b7280", display: "block", lineHeight: 1.3 }}
+                >
+                  {item.slug}
+                </Typography>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontFamily: "monospace",
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#374151",
+                  }}
+                >
+                  {item.skuCode}
+                </Typography>
+              </Box>
+            </Box>
+          );
+        },
+      },
+      {
+        accessorKey: "itemsCount",
+        header: "ITEMS",
+        size: 95,
+        muiTableHeadCellProps: { align: "right" },
+        muiTableBodyCellProps: { align: "right" },
+        Cell: ({ row }) => (
+          <Box>
+            <Typography
+              variant="body2"
+              fontWeight={700}
+              color="#111827"
+              lineHeight={1.2}
+            >
+              {row.original.itemsCount}
+            </Typography>
+            <Typography
+              variant="caption"
+              sx={{
+                fontSize: 9,
+                fontWeight: 700,
+                color: "#6b7280",
+                letterSpacing: 0.4,
+              }}
+            >
+              PRODUCTS
+            </Typography>
+          </Box>
+        ),
+      },
+      {
+        accessorKey: "status",
+        header: "STATUS",
+        size: 80,
+        muiTableHeadCellProps: { align: "center" },
+        muiTableBodyCellProps: { align: "center" },
+        Cell: ({ row }) => (
+          <Box onClick={(e) => e.stopPropagation()}>
+            <Switch
+              size="small"
+              checked={row.original.status}
+              onChange={() => handleToggleStatus(row.original.id)}
+              sx={{
+                "& .MuiSwitch-switchBase.Mui-checked": {
+                  color: "#fff",
+                },
+                "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                  backgroundColor: "#0a0a0a",
+                  opacity: 1,
+                },
+              }}
+            />
+          </Box>
+        ),
+      },
+      {
+        id: "actions",
+        header: "ACTIONS",
+        size: 110,
+        muiTableHeadCellProps: { align: "right" },
+        muiTableBodyCellProps: { align: "right" },
+        Cell: ({ row }) => {
+          const isEditing = inspectorItem?.id === row.original.id;
+          return (
+            <Stack
+              direction="row"
+              spacing={0.5}
+              justifyContent="flex-end"
+              alignItems="center"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <IconButton size="small" title="Open Storefront">
+                <OpenInNew sx={{ fontSize: 15, color: "#4b5563" }} />
+              </IconButton>
+
+              <IconButton
+                size="small"
+                onClick={() => setInspectorItem(row.original)}
+                sx={{
+                  bgcolor: isEditing ? "#0a0a0a" : "transparent",
+                  color: isEditing ? "#fff" : "#4b5563",
+                  borderRadius: 99,
+                  px: isEditing ? 1 : 0.7,
+                  "&:hover": {
+                    bgcolor: isEditing ? "#262626" : "#f3f4f6",
+                  },
+                }}
+              >
+                <EditOutlined sx={{ fontSize: 15 }} />
+              </IconButton>
+
+              <IconButton
+                size="small"
+                onClick={() => handleDeleteSubcategory(row.original.id)}
+              >
+                <DeleteOutlined sx={{ fontSize: 16, color: "#4b5563" }} />
+              </IconButton>
+            </Stack>
+          );
+        },
+      },
+    ],
+    [inspectorItem, currentCategory.id]
+  );
+
+  // Material React Table Instance
+  const table = useMaterialReactTable({
+    columns,
+    data: filteredSubcategories,
+    getRowId: (row) => String(row.id),
+    enableTopToolbar: false,
+    enableBottomToolbar: false,
+    enableColumnActions: false,
+    enableColumnFilters: false,
+    enableGlobalFilter: false,
+    enableSorting: false,
+    enablePagination: false,
+    muiTablePaperProps: {
+      elevation: 0,
+      sx: {
+        borderRadius: 4,
+        border: "1px solid #f0f0f0",
+        backgroundColor: "#fff",
+        overflow: "hidden",
+      },
+    },
+    muiTableHeadRowProps: {
+      sx: {
+        backgroundColor: "#fafafa",
+        boxShadow: "none",
+      },
+    },
+    muiTableHeadCellProps: {
+      sx: {
+        fontSize: 10,
+        fontWeight: 700,
+        color: "#6b7280",
+        letterSpacing: 0.6,
+        py: 1.5,
+        borderBottom: "1px solid #f3f4f6",
+      },
+    },
+    muiTableBodyRowProps: ({ row }) => {
+      const isSelected = inspectorItem?.id === row.original.id;
+      return {
+        onClick: () => setInspectorItem(row.original),
+        sx: {
+          cursor: "pointer",
+          backgroundColor: isSelected ? "#f9fafb" : "#fff",
+          "&:hover": {
+            backgroundColor: "#f9fafb",
+          },
+          "& td": {
+            borderBottom: "1px solid #f3f4f6",
+            py: 2,
+          },
+          "&:last-child td": {
+            borderBottom: "none",
+          },
+        },
+      };
+    },
+  });
+
+  // Inspector Save & Discard Handlers
+  const handleSaveInspector = () => {
+    if (!inspectorItem) return;
+    updateCurrentSubcategories((list) =>
+      list.map((item) =>
+        item.id === inspectorItem.id ? inspectorItem : item
+      )
+    );
+  };
+
+  const handleDiscardInspector = () => {
+    if (!inspectorItem) return;
+    const original = subcategories.find((s) => s.id === inspectorItem.id);
+    if (original) setInspectorItem(original);
+  };
+
+  // Add New Subcategory Handler
+  const handleAddSubcategory = () => {
+    if (!newName.trim()) return;
+    const slugSegment = newName
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-");
+
+    const newItem = {
+      id: Date.now(),
+      rank: subcategories.length + 1,
+      name: newName.trim(),
+      slug: `/${currentCategory.slug}/${slugSegment}`,
+      skuCode:
+        newSku.trim().toUpperCase() ||
+        `${currentCategory.skuPrefix}${slugSegment.slice(0, 3).toUpperCase()}`,
+      itemsCount: 0,
+      status: true,
+      isFeatured: false,
+      thumbnailUrl:
+        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      inspectorPreviewUrl:
+        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
+      tagline: newTagline.trim() || "New seasonal studio addition.",
+      seoTitle: `${newName.trim()} | Atelier Studio`,
+      seoDescription: newTagline.trim(),
+    };
+
+    updateCurrentSubcategories((list) => [...list, newItem]);
+    setInspectorItem(newItem);
+    setNewName("");
+    setNewSku("");
+    setNewTagline("");
+    setAddOpen(false);
+  };
+
+  return (
+    <Box
+      sx={{
+        p: { xs: 2, md: 3.5 },
+        backgroundColor: "#fafafa",
+        minHeight: "100vh",
+        fontFamily: "'Inter', sans-serif",
+      }}
+    >
+      {/* Breadcrumb Trail */}
+      <Breadcrumbs
+        separator="/"
+        sx={{ mb: 1.5, fontSize: 12, color: "#6b7280" }}
+      >
+        <Link underline="hover" color="inherit" href="#">
+          Atelier Platform
+        </Link>
+        <Link underline="hover" color="inherit" href="#">
+          Console
+        </Link>
+        <Link
+          underline="hover"
+          color="inherit"
+          onClick={() => navigate("/categories")}
+          sx={{ cursor: "pointer" }}
+        >
+          Categories
+        </Link>
+        <Typography fontSize={12} fontWeight={600} color="#111827">
+          {currentCategory.title}
+        </Typography>
+        <Typography fontSize={12} fontWeight={600} color="#c2410c">
+          Subcategories
+        </Typography>
+      </Breadcrumbs>
+
+      {/* Top Action Header */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          justifyContent: "space-between",
+          alignItems: { xs: "flex-start", md: "center" },
+          gap: 2,
+          mb: 3,
+        }}
+      >
+        <Box>
+          <Button
+            size="small"
+            startIcon={<ArrowBack sx={{ fontSize: 15 }} />}
+            onClick={() => navigate("/categories")}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              backgroundColor: "#f3f4f6",
+              color: "#374151",
+              fontWeight: 600,
+              fontSize: 12,
+              px: 1.8,
+              mb: 1.2,
+              "&:hover": { backgroundColor: "#e5e7eb" },
+            }}
+          >
+            Back to Categories
+          </Button>
+
+          {/* Page Title + Interactive Category Switcher Dropdown */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <Box
+              onClick={(e) => setCategoryMenuAnchor(e.currentTarget)}
+              sx={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 1.2,
+                cursor: "pointer",
+                userSelect: "none",
+              }}
+            >
+              <Typography
+                variant="h4"
+                sx={{ fontWeight: 700, color: "#111827", letterSpacing: -0.5 }}
+              >
+                Subcategories: {currentCategory.title}
+              </Typography>
+              <IconButton
+                size="small"
+                aria-label="Switch root category"
+                aria-controls={categoryMenuOpen ? "root-category-menu" : undefined}
+                aria-haspopup="true"
+                aria-expanded={categoryMenuOpen ? "true" : undefined}
+                sx={{
+                  border: "1px solid #d1d5db",
+                  backgroundColor: "#fff",
+                  width: 26,
+                  height: 26,
+                  transition: "transform 0.15s",
+                  transform: categoryMenuOpen ? "rotate(180deg)" : "rotate(0deg)",
+                  "&:hover": { backgroundColor: "#f3f4f6" },
+                }}
+              >
+                <KeyboardArrowDown sx={{ fontSize: 17, color: "#111827" }} />
+              </IconButton>
+            </Box>
+
+            {/* Dropdown Menu Listing All Root Categories */}
+            <Menu
+              id="root-category-menu"
+              anchorEl={categoryMenuAnchor}
+              open={categoryMenuOpen}
+              onClose={() => setCategoryMenuAnchor(null)}
+              anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+              transformOrigin={{ vertical: "top", horizontal: "left" }}
+              PaperProps={{
+                elevation: 0,
+                sx: {
+                  mt: 1,
+                  minWidth: 270,
+                  borderRadius: 3,
+                  border: "1px solid #e5e7eb",
+                  boxShadow: "0 12px 32px rgba(0,0,0,0.08)",
+                  p: 0.6,
+                },
+              }}
+            >
+              <Typography
+                variant="caption"
+                sx={{
+                  px: 1.5,
+                  py: 0.7,
+                  display: "block",
+                  fontWeight: 700,
+                  fontSize: 10,
+                  letterSpacing: 0.7,
+                  color: "#6b7280",
+                }}
+              >
+                SWITCH ROOT CATEGORY ({allCategories.length})
+              </Typography>
+
+              {allCategories.map((cat) => {
+                const isSelected = cat.id === currentCategory.id;
+                return (
+                  <MenuItem
+                    key={cat.id}
+                    selected={isSelected}
+                    onClick={() => handleSelectCategory(cat)}
+                    sx={{
+                      borderRadius: 2,
+                      py: 1,
+                      px: 1.5,
+                      mb: 0.3,
+                      "&.Mui-selected": {
+                        backgroundColor: "#f3f4f6",
+                        "&:hover": { backgroundColor: "#e5e7eb" },
+                      },
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 1,
+                          }}
+                        >
+                          <Typography
+                            variant="body2"
+                            fontWeight={isSelected ? 700 : 600}
+                            color="#111827"
+                          >
+                            {cat.title}
+                          </Typography>
+                          <Chip
+                            label={`#${cat.deptCode}`}
+                            size="small"
+                            sx={{
+                              height: 17,
+                              fontSize: 9.5,
+                              fontWeight: 700,
+                              bgcolor: "#fff7ed",
+                              color: "#c2410c",
+                            }}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Typography variant="caption" color="text.secondary">
+                          {cat.subcategories.length} subcategories •{" "}
+                          {cat.skuPrefix}
+                        </Typography>
+                      }
+                    />
+                    {isSelected && (
+                      <Check sx={{ fontSize: 16, color: "#111827", ml: 1 }} />
+                    )}
+                  </MenuItem>
+                );
+              })}
+            </Menu>
+          </Box>
+        </Box>
+
+        {/* Right Primary Buttons */}
+        <Stack direction="row" spacing={1.5}>
+          <Button
+            variant="outlined"
+            startIcon={<SwapVert fontSize="small" />}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              color: "#111827",
+              borderColor: "#e5e7eb",
+              backgroundColor: "#f3f4f6",
+              fontWeight: 600,
+              px: 2.5,
+              py: 1.1,
+              lineHeight: 1.2,
+              textAlign: "left",
+              "&:hover": { borderColor: "#d1d5db", backgroundColor: "#e5e7eb" },
+            }}
+          >
+            Reorder
+            <br />
+            Hierarchy
+          </Button>
+
+          <Button
+            variant="contained"
+            startIcon={<Add />}
+            onClick={() => setAddOpen(true)}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              backgroundColor: "#0a0a0a",
+              color: "#fff",
+              fontWeight: 600,
+              px: 3,
+              py: 1.1,
+              lineHeight: 1.2,
+              textAlign: "left",
+              boxShadow: "none",
+              "&:hover": { backgroundColor: "#262626", boxShadow: "none" },
+            }}
+          >
+            Add New
+            <br />
+            Subcategory
+          </Button>
+        </Stack>
+      </Box>
+
+      {/* Parent Root Category Context Banner */}
+      <Paper
+        elevation={0}
+        sx={{
+          p: 2.5,
+          mb: 3,
+          borderRadius: 4,
+          border: "1px solid #f0f0f0",
+          backgroundColor: "#fff",
+          display: "flex",
+          flexWrap: "wrap",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 2,
+        }}
+      >
+        <Box
+          sx={{ display: "flex", alignItems: "center", gap: 2, flexWrap: "wrap" }}
+        >
+          <Avatar
+            sx={{
+              width: 48,
+              height: 48,
+              bgcolor: "#fff7ed",
+              color: "#c2410c",
+            }}
+          >
+            <CheckroomOutlined />
+          </Avatar>
+
+          <Box>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.3 }}>
+              <Typography variant="subtitle1" fontWeight={700} color="#111827">
+                Root Category: {currentCategory.title}
+              </Typography>
+              <Chip
+                label={`CATALOG DEPT #${currentCategory.deptCode}`}
+                size="small"
+                sx={{
+                  height: 20,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  bgcolor: "#fff7ed",
+                  color: "#c2410c",
+                }}
+              />
+            </Box>
+            <Typography variant="caption" color="text.secondary">
+              {currentCategory.departmentsLabel}
+            </Typography>
+          </Box>
+
+          {/* Summary Metrics */}
+          <Stack
+            direction="row"
+            spacing={3}
+            sx={{ pl: { md: 2 }, flexWrap: "wrap" }}
+          >
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  bgcolor: "#111827",
+                }}
+              />
+              <Typography variant="caption" fontWeight={700} color="#111827">
+                {activeCount} Active
+                <br />
+                Subcategories
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  bgcolor: "#111827",
+                }}
+              />
+              <Typography variant="caption" fontWeight={700} color="#111827">
+                {totalProducts} Live
+                <br />
+                Products
+              </Typography>
+            </Box>
+
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box
+                sx={{
+                  width: 4,
+                  height: 4,
+                  borderRadius: "50%",
+                  bgcolor: "#6b7280",
+                }}
+              />
+              <Typography variant="caption" color="text.secondary">
+                SKU Prefix:
+                <br />
+                <Box component="strong" color="#374151">
+                  {currentCategory.skuPrefix}
+                </Box>
+              </Typography>
+            </Box>
+          </Stack>
+        </Box>
+
+        {/* Banner Right Buttons */}
+        <Stack direction="row" spacing={1.2}>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<TuneOutlined sx={{ fontSize: 16 }} />}
+            onClick={() => navigate("/categories")}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              color: "#111827",
+              borderColor: "#e5e7eb",
+              fontWeight: 600,
+              px: 2,
+              py: 0.8,
+              lineHeight: 1.2,
+              textAlign: "left",
+            }}
+          >
+            Edit Root
+            <br />
+            Category
+          </Button>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<OpenInNew sx={{ fontSize: 16 }} />}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              color: "#111827",
+              borderColor: "#e5e7eb",
+              fontWeight: 600,
+              px: 2,
+              py: 0.8,
+              lineHeight: 1.2,
+              textAlign: "left",
+            }}
+          >
+            View Public
+            <br />
+            Storefront
+          </Button>
+        </Stack>
+      </Paper>
+
+      {/* Main Two-Column Content: Left Table + Right Subcategory Inspector */}
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", lg: "row" },
+          gap: 3,
+          alignItems: "flex-start",
+        }}
+      >
+        {/* Left Column: Search/Filter Bar + Material React Table + Info Notice */}
+        <Box sx={{ flex: 1, minWidth: 0, width: "100%" }}>
+          {/* Search & Filter Toolbar */}
+          <Paper
+            elevation={0}
+            sx={{
+              p: 1.8,
+              mb: 2.5,
+              borderRadius: 4,
+              border: "1px solid #f0f0f0",
+              backgroundColor: "#fff",
+              display: "flex",
+              flexWrap: "wrap",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 1.5,
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="Search by name, slug or prefix.."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              sx={{
+                minWidth: { xs: "100%", sm: 235 },
+                "& .MuiOutlinedInput-root": {
+                  borderRadius: 99,
+                  backgroundColor: "#f3f4f6",
+                  fontSize: 12.5,
+                  "& fieldset": { border: "none" },
+                },
+              }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ fontSize: 17, color: "#9ca3af" }} />
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* Segmented Filter Pill */}
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                backgroundColor: "#f3f4f6",
+                borderRadius: 99,
+                p: 0.4,
+              }}
+            >
+              {[
+                { key: "ALL", label: `All (${subcategories.length})` },
+                { key: "ACTIVE", label: `Active (${activeCount})` },
+                { key: "DRAFT", label: `Draft (${draftCount})` },
+              ].map((tab) => {
+                const active = statusTab === tab.key;
+                return (
+                  <Button
+                    key={tab.key}
+                    size="small"
+                    onClick={() => setStatusTab(tab.key)}
+                    sx={{
+                      borderRadius: 99,
+                      textTransform: "none",
+                      fontSize: 11.5,
+                      fontWeight: 600,
+                      px: 1.6,
+                      py: 0.5,
+                      minWidth: 0,
+                      lineHeight: 1.2,
+                      backgroundColor: active ? "#0a0a0a" : "transparent",
+                      color: active ? "#fff" : "#4b5563",
+                      "&:hover": {
+                        backgroundColor: active ? "#262626" : "rgba(0,0,0,0.04)",
+                      },
+                    }}
+                  >
+                    {tab.label}
+                  </Button>
+                );
+              })}
+            </Box>
+
+            {/* Rank Sort Pill */}
+            <Button
+              size="small"
+              startIcon={<FilterList sx={{ fontSize: 16 }} />}
+              onClick={() => setSortAsc((prev) => !prev)}
+              sx={{
+                borderRadius: 99,
+                textTransform: "none",
+                backgroundColor: "#f3f4f6",
+                color: "#111827",
+                fontWeight: 600,
+                fontSize: 12,
+                px: 1.8,
+                py: 0.6,
+                lineHeight: 1.2,
+                "&:hover": { backgroundColor: "#e5e7eb" },
+              }}
+            >
+              Rank
+              <br />
+              (1–{Math.max(1, subcategories.length)})
+            </Button>
+          </Paper>
+
+          {/* Material React Table */}
+          <MaterialReactTable table={table} />
+
+          {/* Hierarchy Reordering Info Callout */}
+          <Paper
+            elevation={0}
+            sx={{
+              mt: 2.5,
+              p: 2.2,
+              borderRadius: 3.5,
+              backgroundColor: "#f3f4f6",
+              display: "flex",
+              alignItems: "flex-start",
+              gap: 1.5,
+            }}
+          >
+            <InfoOutlined sx={{ fontSize: 18, color: "#c2410c", mt: 0.2 }} />
+            <Box>
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="#111827"
+                display="block"
+                mb={0.3}
+              >
+                Hierarchy Reordering
+              </Typography>
+              <Typography variant="caption" color="text.secondary" lineHeight={1.5}>
+                The sequence shown above determines how subcategories appear in
+                storefront navigation tabs and mobile filter sheets. Grab
+                handles to reprioritize.
+              </Typography>
+            </Box>
+          </Paper>
+        </Box>
+
+        {/* Right Column: Subcategory Inspector Panel */}
+        {inspectorItem && (
+          <Paper
+            elevation={0}
+            sx={{
+              width: { xs: "100%", lg: 365 },
+              flexShrink: 0,
+              p: 3,
+              borderRadius: 4,
+              border: "1px solid #f0f0f0",
+              backgroundColor: "#fff",
+              position: { lg: "sticky" },
+              top: 24,
+            }}
+          >
+            {/* Inspector Header */}
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                mb: 2,
+              }}
+            >
+              <Box>
+                <Stack direction="row" spacing={1} alignItems="center" mb={0.8}>
+                  <Chip
+                    label="INSPECTOR"
+                    size="small"
+                    sx={{
+                      height: 18,
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      bgcolor: "#0a0a0a",
+                      color: "#fff",
+                    }}
+                  />
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontWeight: 700,
+                      color: "#6b7280",
+                      letterSpacing: 0.6,
+                      fontSize: 10,
+                    }}
+                  >
+                    CATEGORY CONTEXT
+                  </Typography>
+                </Stack>
+                <Typography
+                  variant="h6"
+                  fontWeight={700}
+                  color="#111827"
+                  lineHeight={1.2}
+                >
+                  Edit Subcategory:
+                  <br />
+                  {inspectorItem.name}
+                </Typography>
+              </Box>
+              <IconButton size="small" onClick={() => setInspectorItem(null)}>
+                <Close fontSize="small" />
+              </IconButton>
+            </Box>
+
+            {/* Locked Parent Category Box */}
+            <Box
+              sx={{
+                p: 1.5,
+                mb: 2.5,
+                borderRadius: 2.5,
+                backgroundColor: "#f3f4f6",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Box>
+                <Typography
+                  variant="caption"
+                  sx={{
+                    fontSize: 9.5,
+                    fontWeight: 700,
+                    color: "#6b7280",
+                    display: "block",
+                    mb: 0.3,
+                  }}
+                >
+                  LOCKED PARENT CATEGORY
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
+                  <LockOutlined sx={{ fontSize: 14, color: "#374151" }} />
+                  <Typography variant="caption" fontWeight={700} color="#111827">
+                    {currentCategory.title} (Current Master)
+                  </Typography>
+                </Box>
+              </Box>
+              <Chip
+                label={`Dept ${currentCategory.deptCode}`}
+                size="small"
+                sx={{
+                  height: 22,
+                  fontSize: 11,
+                  fontWeight: 600,
+                  bgcolor: "#e5e7eb",
+                  color: "#374151",
+                }}
+              />
+            </Box>
+
+            {/* Subcategory Name + Display Order / Rank */}
+            <Stack direction="row" spacing={1.5} sx={{ mb: 2.2 }}>
+              <Box sx={{ flex: 1.4 }}>
+                <Typography
+                  variant="caption"
+                  fontWeight={700}
+                  color="#4b5563"
+                  display="block"
+                  fontSize={10}
+                  mb={0.6}
+                >
+                  SUBCATEGORY NAME
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  value={inspectorItem.name}
+                  onChange={(e) =>
+                    setInspectorItem({ ...inspectorItem, name: e.target.value })
+                  }
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      backgroundColor: "#f3f4f6",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      "& fieldset": { border: "none" },
+                    },
+                  }}
+                />
+              </Box>
+
+              <Box sx={{ flex: 1 }}>
+                <Typography
+                  variant="caption"
+                  fontWeight={700}
+                  color="#4b5563"
+                  display="block"
+                  fontSize={10}
+                  mb={0.6}
+                >
+                  DISPLAY ORDER / RANK
+                </Typography>
+                <TextField
+                  fullWidth
+                  size="small"
+                  type="number"
+                  value={inspectorItem.rank}
+                  onChange={(e) =>
+                    setInspectorItem({
+                      ...inspectorItem,
+                      rank: Number(e.target.value) || 1,
+                    })
+                  }
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      backgroundColor: "#f3f4f6",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      "& fieldset": { border: "none" },
+                    },
+                  }}
+                />
+              </Box>
+            </Stack>
+
+            {/* Storefront URL Slug */}
+            <Box sx={{ mb: 2.2 }}>
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="#4b5563"
+                display="block"
+                fontSize={10}
+                mb={0.6}
+              >
+                STOREFRONT URL SLUG
+              </Typography>
+              <TextField
+                fullWidth
+                size="small"
+                value={inspectorItem.slug}
+                onChange={(e) =>
+                  setInspectorItem({ ...inspectorItem, slug: e.target.value })
+                }
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Typography variant="caption" color="text.secondary">
+                        atelier.studio
+                      </Typography>
+                    </InputAdornment>
+                  ),
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    backgroundColor: "#f3f4f6",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    "& fieldset": { border: "none" },
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Description & Editorial Tagline */}
+            <Box sx={{ mb: 2.2 }}>
+              <Typography
+                variant="caption"
+                fontWeight={700}
+                color="#4b5563"
+                display="block"
+                fontSize={10}
+                mb={0.6}
+              >
+                DESCRIPTION & EDITORIAL TAGLINE
+              </Typography>
+              <TextField
+                fullWidth
+                multiline
+                rows={2}
+                size="small"
+                value={inspectorItem.tagline}
+                onChange={(e) =>
+                  setInspectorItem({
+                    ...inspectorItem,
+                    tagline: e.target.value,
+                  })
+                }
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    borderRadius: 2,
+                    backgroundColor: "#f3f4f6",
+                    fontSize: 12.5,
+                    "& fieldset": { border: "none" },
+                  },
+                }}
+              />
+            </Box>
+
+            {/* Subcategory Visual Thumbnail */}
+            <Box sx={{ mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 0.8,
+                }}
+              >
+                <Typography
+                  variant="caption"
+                  fontWeight={700}
+                  color="#4b5563"
+                  fontSize={10}
+                >
+                  SUBCATEGORY VISUAL THUMBNAIL
+                </Typography>
+                <Typography variant="caption" color="text.secondary" fontSize={10}>
+                  800×800 • Max 5MB
+                </Typography>
+              </Box>
+
+              <Box
+                sx={{
+                  p: 1.5,
+                  borderRadius: 2.5,
+                  backgroundColor: "#f3f4f6",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 1.5,
+                }}
+              >
+                <Avatar
+                  variant="rounded"
+                  src={inspectorItem.inspectorPreviewUrl}
+                  sx={{ width: 68, height: 68, borderRadius: 2 }}
+                />
+                <Box>
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 0.5,
+                      mb: 0.3,
+                      cursor: "pointer",
+                    }}
+                  >
+                    <CloudUploadOutlined
+                      sx={{ fontSize: 15, color: "#c2410c" }}
+                    />
+                    <Typography variant="caption" fontWeight={700} color="#111827">
+                      Replace Thumbnail
+                    </Typography>
+                  </Box>
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    display="block"
+                    fontSize={11}
+                    lineHeight={1.3}
+                    mb={0.6}
+                  >
+                    Drag image here or browse local studio assets
+                  </Typography>
+                  <Typography
+                    variant="caption"
+                    sx={{
+                      fontSize: 9.5,
+                      fontWeight: 700,
+                      color: "#374151",
+                      letterSpacing: 0.4,
+                    }}
+                  >
+                    1 IMAGE UPLOADED (ACTIVE)
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+
+            {/* SEO & Store Meta Tags Accordion */}
+            <Accordion
+              elevation={0}
+              disableGutters
+              sx={{
+                mb: 2.5,
+                borderRadius: "10px !important",
+                backgroundColor: "#f3f4f6",
+                "&:before": { display: "none" },
+              }}
+            >
+              <AccordionSummary expandIcon={<ExpandMore fontSize="small" />}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Search sx={{ fontSize: 16, color: "#4b5563" }} />
+                  <Typography variant="caption" fontWeight={700} color="#111827">
+                    SEO & Store Meta Tags
+                  </Typography>
+                </Box>
+              </AccordionSummary>
+              <AccordionDetails sx={{ pt: 0 }}>
+                <Stack spacing={1.2}>
+                  <TextField
+                    size="small"
+                    label="Meta Title"
+                    fullWidth
+                    value={inspectorItem.seoTitle}
+                    onChange={(e) =>
+                      setInspectorItem({
+                        ...inspectorItem,
+                        seoTitle: e.target.value,
+                      })
+                    }
+                    sx={{ bgcolor: "#fff", borderRadius: 1 }}
+                  />
+                  <TextField
+                    size="small"
+                    label="Meta Description"
+                    fullWidth
+                    multiline
+                    rows={2}
+                    value={inspectorItem.seoDescription}
+                    onChange={(e) =>
+                      setInspectorItem({
+                        ...inspectorItem,
+                        seoDescription: e.target.value,
+                      })
+                    }
+                    sx={{ bgcolor: "#fff", borderRadius: 1 }}
+                  />
+                </Stack>
+              </AccordionDetails>
+            </Accordion>
+
+            {/* Discard & Save Buttons */}
+            <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+              <Button
+                fullWidth
+                onClick={handleDiscardInspector}
+                sx={{
+                  borderRadius: 99,
+                  textTransform: "none",
+                  backgroundColor: "#f3f4f6",
+                  color: "#111827",
+                  fontWeight: 600,
+                  py: 1.1,
+                  "&:hover": { backgroundColor: "#e5e7eb" },
+                }}
+              >
+                Discard
+              </Button>
+              <Button
+                fullWidth
+                variant="contained"
+                onClick={handleSaveInspector}
+                sx={{
+                  borderRadius: 99,
+                  textTransform: "none",
+                  backgroundColor: "#0a0a0a",
+                  color: "#fff",
+                  fontWeight: 600,
+                  py: 1.1,
+                  boxShadow: "none",
+                  "&:hover": { backgroundColor: "#262626", boxShadow: "none" },
+                }}
+              >
+                Save Changes
+              </Button>
+            </Stack>
+
+            {/* Return Link */}
+            <Box sx={{ textAlign: "center" }}>
+              <Link
+                component="button"
+                underline="hover"
+                onClick={() => navigate("/categories")}
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 500,
+                  color: "#6b7280",
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                }}
+              >
+                <ArrowBack sx={{ fontSize: 14 }} />
+                Return to Categories Overview
+              </Link>
+            </Box>
+          </Paper>
+        )}
+      </Box>
+
+      {/* Add New Subcategory Dialog */}
+      <Dialog
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        maxWidth="xs"
+        fullWidth
+        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
+      >
+        <DialogTitle sx={{ fontWeight: 700 }}>
+          Add New Subcategory ({currentCategory.title})
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <TextField
+              label="Subcategory Name"
+              fullWidth
+              size="small"
+              placeholder="e.g. Long Sleeve"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+            />
+            <TextField
+              label="SKU Code (optional)"
+              fullWidth
+              size="small"
+              placeholder={`e.g. ${currentCategory.skuPrefix}LNG`}
+              value={newSku}
+              onChange={(e) => setNewSku(e.target.value)}
+            />
+            <TextField
+              label="Editorial Tagline"
+              fullWidth
+              size="small"
+              multiline
+              rows={2}
+              value={newTagline}
+              onChange={(e) => setNewTagline(e.target.value)}
+            />
+          </Stack>
+        </DialogContent>
+        <DialogActions sx={{ px: 3, pb: 2 }}>
+          <Button
+            onClick={() => setAddOpen(false)}
+            sx={{ textTransform: "none", color: "#6b7280" }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            onClick={handleAddSubcategory}
+            sx={{
+              borderRadius: 99,
+              textTransform: "none",
+              backgroundColor: "#0a0a0a",
+              "&:hover": { backgroundColor: "#262626" },
+            }}
+          >
+            Add Subcategory
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
+  );
+}
