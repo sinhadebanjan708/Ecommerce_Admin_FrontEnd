@@ -13,7 +13,8 @@ const categorySlice = createSlice({
   initialState,
   reducers: {
     storeCategoryList(state,action){
-      state.categoryList = action.payload
+      state.categoryList = action.payload.data
+      state.totalRecords= action.payload.pagination.totalRecords
     }
   },
 });

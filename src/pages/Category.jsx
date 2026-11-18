@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -20,6 +20,7 @@ import {
   IconButton,
   Stack,
   LinearProgress,
+  Tooltip,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -48,6 +49,7 @@ import {
 } from "@mui/icons-material";
 import * as actions from "../store/actions";
 import { useSelector, useDispatch } from "react-redux";
+import CreateCategoryDialogue from "./CreateCategoryDialogue";
 
 const INITIAL_CATEGORIES = [
   {
@@ -156,6 +158,8 @@ const mapCategoryData = (category) => ({
   // API field -> UI field
   title: category.category_name,
 
+  department_id: category.department_id,
+
   slug: category.slug,
   description: category.description,
 
@@ -183,36 +187,56 @@ const mapCategoryData = (category) => ({
 export default function Category() {
     const dispatch =useDispatch();
   const categoryList = useSelector((state)=> state.category.categoryList)
-  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const totalRecords = useSelector((state)=> state.category.totalRecords)
+  const [categories, setCategories] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDept, setSelectedDept] = useState("All");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [rowSelection, setRowSelection] = useState({});
+  const [pagination, setPagination] = React.useState({
+    pageIndex: 0,
+    pageSize: 5,
+  });
+  const [createOpen, setCreateOpen] = React.useState(false);
 
   // Curator Inspector state
   const [inspectorCategory, setInspectorCategory] = useState(
-    INITIAL_CATEGORIES[0]
+    null
   );
-
   // Create Category Modal state
-  const [createOpen, setCreateOpen] = useState(false);
-  const [newCategoryTitle, setNewCategoryTitle] = useState("");
-  const [newCategorySlug, setNewCategorySlug] = useState("");
-
-React.useEffect(() => {
-  dispatch(actions.fetchAllCategoris());
-}, [dispatch]);
-
-React.useEffect(() => {
-  if (categoryList && categoryList.length > 0) {
-    const mappedCategories = categoryList.map(mapCategoryData);
-
-    setCategories(mappedCategories);
-
-    // Set the first API category as the selected category
-    setInspectorCategory(mappedCategories[0]);
-  }
-}, [categoryList]);
+  // const [createOpen, setCreateOpen] = useState(false);
+  // const [newCategoryTitle, setNewCategoryTitle] = useState("");
+  // const [newCategorySlug, setNewCategorySlug] = useState("");
+  React.useEffect(() => {
+    if(categoryList && categoryList.length > 0){
+      setInspectorCategory(categoryList[0])
+    }
+  }, [categoryList])
+  
+  
+  React.useEffect(() => {
+    dispatch(actions.fetchAllCategoris(pagination?.pageIndex,pagination?.pageSize));
+  }, [pagination?.pageIndex,pagination?.pageSize]);
+  
+  React.useEffect(() => {
+    if (categoryList && categoryList.length > 0) {
+      const mappedCategories = categoryList.map(mapCategoryData);
+      
+      setCategories(mappedCategories);
+      
+      // Set the first API category as the selected category
+      setInspectorCategory(mappedCategories[0]);
+    }
+  }, [categoryList]);
+  
+  console.log('inspector_category__edit',inspectorCategory)
+  
+  React.useEffect(() => {
+  setPagination((prev) => ({
+    ...prev,
+    pageIndex: 0,
+  }));
+}, [searchQuery, selectedDept, statusFilter]);
 
   console.log('categoryList',categoryList)
 
@@ -346,6 +370,14 @@ React.useEffect(() => {
         size: 150,
         
         Cell: ({ row }) => (
+           <Tooltip 
+           title={
+    row.original.subcategories?.length
+      ? row.original.subcategories
+          .map((item, idx) => `${idx + 1}. ${item.subcategory_name}`)
+          .join("  ")
+      : ""
+  }>
             <Chip
             label={`Subcategories (${row.original.subcategories?.length || 0})`}
             deleteIcon={<ArrowForward sx={{ fontSize: 14 }} />}
@@ -360,6 +392,7 @@ React.useEffect(() => {
                 height: 30,
             }}
             />
+            </Tooltip>
             
         ),
       },
@@ -480,165 +513,360 @@ React.useEffect(() => {
   );
 
   // Material React Table Instance
-  const table = useMaterialReactTable({
-    columns,
-    data: filteredCategories,
-    getRowId: (row) => String(row.id),
-    enableRowSelection: true,
-    onRowSelectionChange: setRowSelection,
-    state: { rowSelection },
-    enableColumnActions: false,
-    enableColumnFilters: false,
-    enableGlobalFilter: false,
-    enableDensityToggle: false,
-    enableFullScreenToggle: false,
-    enableHiding: false,
-    enableSorting: true,
-    enableBottomToolbar: true,
-    initialState: {
-      pagination: { pageSize: 10, pageIndex: 0 },
+//   const table = useMaterialReactTable({
+//     columns,
+//     data: filteredCategories,
+//     getRowId: (row) => String(row.id),
+
+//   enableRowSelection: true,
+//   state: {
+//     rowSelection,
+//     pagination,
+//   },
+//   onPaginationChange: setPagination,
+//     onRowSelectionChange: setRowSelection,
+//     manualPagination: false,
+
+//   enablePagination: true,
+//     state: { rowSelection },
+//     enableColumnActions: false,
+//     enableColumnFilters: false,
+//     enableGlobalFilter: false,
+//     enableDensityToggle: false,
+//     enableFullScreenToggle: false,
+//     enableHiding: false,
+//     enableSorting: true,
+//     enableBottomToolbar: true,
+//     initialState: {
+//       pagination: { pageSize: 3, pageIndex: 0 },
+//     },
+//     muiTablePaperProps: {
+//       elevation: 0,
+//       sx: {
+//         borderRadius: 4,
+//         border: "1px solid #f0f0f0",
+//         backgroundColor: "#fff",
+//         overflow: "hidden",
+//       },
+//     },
+//     muiTableHeadRowProps: {
+//       sx: {
+//         backgroundColor: "#fafafa",
+//         boxShadow: "none",
+//       },
+//     },
+//     muiTableHeadCellProps: {
+//       sx: {
+//         fontSize: 10,
+//         fontWeight: 700,
+//         color: "#6b7280",
+//         letterSpacing: 0.5,
+//         py: 1.4,
+//         borderBottom: "1px solid #f3f4f6",
+//       },
+//     },
+//     muiTableBodyRowProps: ({ row }) => {
+//       const isSelected = inspectorCategory?.id === row.original.id;
+//       return {
+//         onClick: () => setInspectorCategory(row.original),
+//         sx: {
+//           cursor: "pointer",
+//           backgroundColor: isSelected ? "#f9fafb" : "#fff",
+//           "&:hover": {
+//             backgroundColor: "#f9fafb",
+//           },
+//           "& td": {
+//             borderBottom: "1px solid #f3f4f6",
+//             py: 1.8,
+//           },
+//         },
+//       };
+//     },
+//     renderTopToolbar: ({ table }) => (
+//       <Box
+//         sx={{
+//           px: 2.5,
+//           py: 1.5,
+//           display: "flex",
+//           justifyContent: "space-between",
+//           alignItems: "center",
+//           borderBottom: "1px solid #f3f4f6",
+//           backgroundColor: "#fff",
+//         }}
+//       >
+//         <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+//           <Checkbox
+//             size="small"
+//             checked={table.getIsAllRowsSelected()}
+//             indeterminate={table.getIsSomeRowsSelected()}
+//             onChange={table.getToggleAllRowsSelectedHandler()}
+//           />
+//           <Typography
+//             variant="caption"
+//             sx={{ fontWeight: 700, color: "#6b7280", letterSpacing: 0.5 }}
+//           >
+//             {filteredCategories.length} CATEGORIES LOADED
+//           </Typography>
+//         </Box>
+//         <Typography variant="caption" color="text.secondary" fontWeight={500}>
+//           Sorted by Display Order
+//         </Typography>
+//       </Box>
+//     ),
+//   renderBottomToolbar: ({ table }) => {
+//   const pageIndex = table.getState().pagination.pageIndex;
+//   const pageSize = table.getState().pagination.pageSize;
+
+//   const totalRows = table.getPrePaginationRowModel().rows.length;
+
+//   const pageCount = Math.max(
+//     1,
+//     Math.ceil(totalRows / pageSize)
+//   );
+
+//   const startRow = totalRows === 0 ? 0 : pageIndex * pageSize + 1;
+
+//   const endRow = Math.min(
+//     (pageIndex + 1) * pageSize,
+//     totalRows
+//   );
+
+//   return (
+//     <Box
+//       sx={{
+//         px: 2.5,
+//         py: 1.8,
+//         display: "flex",
+//         justifyContent: "space-between",
+//         alignItems: "center",
+//         backgroundColor: "#fafafa",
+//       }}
+//     >
+//       <Typography variant="caption" color="text.secondary">
+//         Showing {startRow}–{endRow} of {totalRows} Categories
+//       </Typography>
+
+//       <Stack direction="row" spacing={1.5} alignItems="center">
+//         <Button
+//           size="small"
+//           disabled={!table.getCanPreviousPage()}
+//           onClick={() => table.previousPage()}
+//           sx={{
+//             minWidth: 0,
+//             textTransform: "none",
+//             fontSize: 12,
+//           }}
+//         >
+//           Prev
+//         </Button>
+
+//         <Typography variant="caption" color="text.secondary">
+//           Page {pageIndex + 1} of {pageCount}
+//         </Typography>
+
+//         <Button
+//           size="small"
+//           disabled={!table.getCanNextPage()}
+//           onClick={() => table.nextPage()}
+//           sx={{
+//             minWidth: 0,
+//             textTransform: "none",
+//             fontSize: 12,
+//           }}
+//         >
+//           Next
+//         </Button>
+//       </Stack>
+//     </Box>
+//   );
+// },
+//   });
+const table = useMaterialReactTable({
+  columns,
+  data: filteredCategories,
+
+  getRowId: (row) => String(row.id),
+
+  enableRowSelection: true,
+  enablePagination: true,
+  manualPagination: true,
+rowCount: totalRecords,
+  // Controlled states
+  state: {
+    rowSelection,
+    pagination,
+  },
+
+  onPaginationChange: setPagination,
+  onRowSelectionChange: setRowSelection,
+
+  enableColumnActions: false,
+  enableColumnFilters: false,
+  enableGlobalFilter: false,
+  enableDensityToggle: false,
+  enableFullScreenToggle: false,
+  enableHiding: false,
+  enableSorting: true,
+  enableBottomToolbar: true,
+
+  muiTablePaperProps: {
+    elevation: 0,
+    sx: {
+      borderRadius: 4,
+      border: "1px solid #f0f0f0",
+      backgroundColor: "#fff",
+      overflow: "hidden",
     },
-    muiTablePaperProps: {
-      elevation: 0,
+  },
+
+  muiTableHeadRowProps: {
+    sx: {
+      backgroundColor: "#fafafa",
+      boxShadow: "none",
+    },
+  },
+
+  muiTableHeadCellProps: {
+    sx: {
+      fontSize: 10,
+      fontWeight: 700,
+      color: "#6b7280",
+      letterSpacing: 0.5,
+      py: 1.4,
+      borderBottom: "1px solid #f3f4f6",
+    },
+  },
+
+  muiTableBodyRowProps: ({ row }) => {
+    const isSelected = inspectorCategory?.id === row.original.id;
+
+    return {
+      onClick: () => setInspectorCategory(row.original),
       sx: {
-        borderRadius: 4,
-        border: "1px solid #f0f0f0",
-        backgroundColor: "#fff",
-        overflow: "hidden",
-      },
-    },
-    muiTableHeadRowProps: {
-      sx: {
-        backgroundColor: "#fafafa",
-        boxShadow: "none",
-      },
-    },
-    muiTableHeadCellProps: {
-      sx: {
-        fontSize: 10,
-        fontWeight: 700,
-        color: "#6b7280",
-        letterSpacing: 0.5,
-        py: 1.4,
-        borderBottom: "1px solid #f3f4f6",
-      },
-    },
-    muiTableBodyRowProps: ({ row }) => {
-      const isSelected = inspectorCategory?.id === row.original.id;
-      return {
-        onClick: () => setInspectorCategory(row.original),
-        sx: {
-          cursor: "pointer",
-          backgroundColor: isSelected ? "#f9fafb" : "#fff",
-          "&:hover": {
-            backgroundColor: "#f9fafb",
-          },
-          "& td": {
-            borderBottom: "1px solid #f3f4f6",
-            py: 1.8,
-          },
+        cursor: "pointer",
+        backgroundColor: isSelected ? "#f9fafb" : "#fff",
+        "&:hover": {
+          backgroundColor: "#f9fafb",
         },
-      };
-    },
-    renderTopToolbar: ({ table }) => (
+        "& td": {
+          borderBottom: "1px solid #f3f4f6",
+          py: 1.8,
+        },
+      },
+    };
+  },
+
+  renderTopToolbar: ({ table }) => (
+    <Box
+      sx={{
+        px: 2.5,
+        py: 1.5,
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        borderBottom: "1px solid #f3f4f6",
+        backgroundColor: "#fff",
+      }}
+    >
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+        <Checkbox
+          size="small"
+          checked={table.getIsAllRowsSelected()}
+          indeterminate={table.getIsSomeRowsSelected()}
+          onChange={table.getToggleAllRowsSelectedHandler()}
+        />
+
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            color: "#6b7280",
+            letterSpacing: 0.5,
+          }}
+        >
+          {filteredCategories.length} CATEGORIES LOADED
+        </Typography>
+      </Box>
+
+      <Typography variant="caption" color="text.secondary" fontWeight={500}>
+        Sorted by Display Order
+      </Typography>
+    </Box>
+  ),
+
+  renderBottomToolbar: ({ table }) => {
+    const pageIndex = table.getState().pagination.pageIndex;
+    const pageSize = table.getState().pagination.pageSize;
+
+    const totalRows = table.getPrePaginationRowModel().rows.length;
+    const pageCount = table.getPageCount();
+
+    const startRow = totalRows === 0 ? 0 : pageIndex * pageSize + 1;
+    const endRow = Math.min((pageIndex + 1) * pageSize, totalRows);
+
+    return (
       <Box
         sx={{
           px: 2.5,
-          py: 1.5,
+          py: 1.8,
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          borderBottom: "1px solid #f3f4f6",
-          backgroundColor: "#fff",
+          backgroundColor: "#fafafa",
         }}
       >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-          <Checkbox
-            size="small"
-            checked={table.getIsAllRowsSelected()}
-            indeterminate={table.getIsSomeRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
-          />
-          <Typography
-            variant="caption"
-            sx={{ fontWeight: 700, color: "#6b7280", letterSpacing: 0.5 }}
-          >
-            {filteredCategories.length} CATEGORIES LOADED
-          </Typography>
-        </Box>
-        <Typography variant="caption" color="text.secondary" fontWeight={500}>
-          Sorted by Display Order
+        <Typography variant="caption" color="text.secondary">
+          Showing {startRow}–{endRow} of {totalRows} Categories
         </Typography>
-      </Box>
-    ),
-    renderBottomToolbar: ({ table }) => {
-      const pageIndex = table.getState().pagination.pageIndex;
-      const pageCount = Math.max(1, table.getPageCount());
-      return (
-        <Box
-          sx={{
-            px: 2.5,
-            py: 1.8,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            backgroundColor: "#fafafa",
-          }}
-        >
+
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Button
+            size="small"
+            disabled={!table.getCanPreviousPage()}
+            onClick={() => table.previousPage()}
+            sx={{ minWidth: 0, textTransform: "none", fontSize: 12 }}
+          >
+            Prev
+          </Button>
+
           <Typography variant="caption" color="text.secondary">
-            Showing {filteredCategories.length} of {categories.length} Root
-            Taxonomies
+            Page {pageIndex + 1} of {pageCount}
           </Typography>
-          <Stack direction="row" spacing={1.5} alignItems="center">
-            {pageCount > 1 && (
-              <Stack direction="row" spacing={0.5}>
-                <Button
-                  size="small"
-                  disabled={!table.getCanPreviousPage()}
-                  onClick={() => table.previousPage()}
-                  sx={{ minWidth: 0, textTransform: "none", fontSize: 12 }}
-                >
-                  Prev
-                </Button>
-                <Button
-                  size="small"
-                  disabled={!table.getCanNextPage()}
-                  onClick={() => table.nextPage()}
-                  sx={{ minWidth: 0, textTransform: "none", fontSize: 12 }}
-                >
-                  Next
-                </Button>
-              </Stack>
-            )}
-            <Typography variant="caption" color="text.secondary">
-              <Box component="strong" color="#111827">
-                {pageIndex + 1}
-              </Box>{" "}
-              of {pageCount} Page
-            </Typography>
-          </Stack>
-        </Box>
-      );
-    },
-  });
+
+          <Button
+            size="small"
+            disabled={!table.getCanNextPage()}
+            onClick={() => table.nextPage()}
+            sx={{ minWidth: 0, textTransform: "none", fontSize: 12 }}
+          >
+            Next
+          </Button>
+        </Stack>
+      </Box>
+    );
+  },
+});
 
   // Inspector Handlers
-  const handleInspectorDeptToggle = (dept) => {
-    if (!inspectorCategory) return;
-    const upper = dept.toUpperCase();
-    const exists = inspectorCategory.departments.includes(upper);
-    const updatedDepts = exists
-      ? inspectorCategory.departments.filter((d) => d !== upper)
-      : [...inspectorCategory.departments, upper];
+  // const handleInspectorDeptToggle = (dept) => {
+  //   if (!inspectorCategory) return;
+  //   const upper = dept.toUpperCase();
+  //   const exists = inspectorCategory.departments.includes(upper);
+  //   const updatedDepts = exists
+  //     ? inspectorCategory.departments.filter((d) => d !== upper)
+  //     : [...inspectorCategory.departments, upper];
 
-    setInspectorCategory({
-      ...inspectorCategory,
-      departments: updatedDepts,
-    });
-  };
+  //   setInspectorCategory({
+  //     ...inspectorCategory,
+  //     departments: updatedDepts,
+  //   });
+  // };
 
   const handleSaveInspector = () => {
     if (!inspectorCategory) return;
+    if(inspectorCategory.id){
+      dispatch(actions.updateCategory(inspectorCategory.id, inspectorCategory))
+    }
     setCategories((prev) =>
       prev.map((cat) =>
         cat.id === inspectorCategory.id ? inspectorCategory : cat
@@ -652,33 +880,91 @@ React.useEffect(() => {
     if (original) setInspectorCategory(original);
   };
 
-  // Create Category Handler
-  const handleCreateCategory = () => {
-    if (!newCategoryTitle.trim()) return;
-    const slug =
-      newCategorySlug.trim() ||
-      newCategoryTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const inspectorFileInputRef = useRef(null);
 
-    const newCat = {
-      id: Date.now(),
-      title: newCategoryTitle.trim(),
-      slug,
-      departments: ["UNISEX"],
-      subcategoriesCount: 0,
-      liveSkus: 0,
-      hasBanner: false,
-      bannerDimensions: "",
-      bannerUrl: "",
-      liveStatus: false,
-      isDraft: true,
+// const handleInspectorImageChange = (file) => {
+//   if (!file) return;
+//   const previewUrl = URL.createObjectURL(file);
+//   setInspectorCategory((prev) => ({
+//     ...prev,
+//     imageFile: file,
+//     bannerUrl: previewUrl,
+//     hasBanner: true,
+//     bannerDimensions: "1200×400",
+//   }));
+// };
+
+// const handleInspectorDeptToggle = (dept) => {
+//   if (!inspectorCategory) return;
+//   const upper = dept.toUpperCase();
+//   const currentDepts = inspectorCategory.departments || [];
+//   const exists = currentDepts.includes(upper);
+
+//   setInspectorCategory({
+//     ...inspectorCategory,
+//     departments: exists
+//       ? currentDepts.filter((d) => d !== upper)
+//       : [...currentDepts, upper],
+//   });
+// };
+
+// Generic field change handler for name, slug, description, status, etc.
+const handleInspectorFieldChange = (field, value) => {
+  setInspectorCategory((prev) => {
+    if (!prev) return prev;
+
+    // Keep name / category_name / title in sync
+    if (field === "name") {
+      return {
+        ...prev,
+        name: value,
+        category_name: value,
+        title: value,
+      };
+    }
+
+    // Keep string status ("active" | "draft") and boolean flags in sync
+    if (field === "status") {
+      const isActive = value === true || value === "active";
+      return {
+        ...prev,
+        status: isActive ? "active" : "draft",
+        liveStatus: isActive,
+        isDraft: !isActive,
+      };
+    }
+
+    return {
+      ...prev,
+      [field]: value,
     };
+  });
+};
 
-    setCategories((prev) => [...prev, newCat]);
-    setInspectorCategory(newCat);
-    setNewCategoryTitle("");
-    setNewCategorySlug("");
-    setCreateOpen(false);
-  };
+// Image file change handler (supports file input & drag-and-drop)
+const handleInspectorImageChange = (file) => {
+  if (!file) return;
+  const previewUrl = URL.createObjectURL(file);
+
+  setInspectorCategory((prev) => ({
+    ...prev,
+    image: file, // New File object for FormData submission
+    imageFile: file,
+    bannerUrl: previewUrl, // Local blob URL for immediate <img> preview
+    hasBanner: true,
+  }));
+};
+
+// Department selection handler (maps to department_id: 1 | 2 | 3)
+const handleInspectorDeptToggle = (deptId) => {
+  setInspectorCategory((prev) => ({
+    ...prev,
+    department_id: prev.department_id === deptId ? null : deptId,
+  }));
+};
+
+  // Create Category Handler
+ 
 
   const totalLiveSkus = categories.reduce((sum, c) => sum + c.liveSkus, 0);
   const totalSubcategories = categories.reduce(
@@ -1087,325 +1373,384 @@ React.useEffect(() => {
 
         {/* Right Curator Inspector Panel */}
         {inspectorCategory && (
-          <Paper
-            elevation={0}
-            sx={{
-              width: { xs: "100%", lg: 360 },
-              flexShrink: 0,
-              p: 3,
-              borderRadius: 4,
-              border: "1px solid #f0f0f0",
-              backgroundColor: "#fff",
-              position: { lg: "sticky" },
-              top: 24,
-            }}
-          >
+  <Paper
+    elevation={0}
+    sx={{
+      width: { xs: "100%", lg: 360 },
+      flexShrink: 0,
+      p: 3,
+      borderRadius: 4,
+      border: "1px solid #f0f0f0",
+      backgroundColor: "#fff",
+      position: { lg: "sticky" },
+      top: 24,
+    }}
+  >
+    {/* Header */}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        mb: 2.5,
+      }}
+    >
+      <Box>
+        <Typography
+          variant="caption"
+          sx={{
+            fontWeight: 700,
+            color: "#c2410c",
+            letterSpacing: 0.8,
+            display: "block",
+          }}
+        >
+          CURATOR INSPECTOR
+        </Typography>
+        <Typography variant="h6" fontWeight={700} color="#111827">
+          {inspectorCategory.title || inspectorCategory.category_name || "Edit Category"}
+        </Typography>
+      </Box>
+      <IconButton
+        size="small"
+        onClick={() => setInspectorCategory(null)}
+        sx={{ bgcolor: "#f3f4f6" }}
+      >
+        <Close fontSize="small" />
+      </IconButton>
+    </Box>
+
+    {/* 1. Category Title */}
+    <Box sx={{ mb: 2.2 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#374151"
+        display="block"
+        mb={0.7}
+      >
+        Category Title
+      </Typography>
+      <TextField
+        fullWidth
+        size="small"
+        value={inspectorCategory.title ?? inspectorCategory.category_name ?? ""}
+        onChange={(e) =>
+          setInspectorCategory({
+            ...inspectorCategory,
+            title: e.target.value,
+            name: e.target.value,
+            category_name: e.target.value,
+          })
+        }
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 99,
+            backgroundColor: "#f3f4f6",
+            fontSize: 13,
+            "& fieldset": { border: "none" },
+          },
+        }}
+      />
+    </Box>
+
+    {/* 2. Storefront Permalink Slug */}
+    <Box sx={{ mb: 2.2 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#374151"
+        display="block"
+        mb={0.7}
+      >
+        Storefront Permalink Slug
+      </Typography>
+      <TextField
+        fullWidth
+        size="small"
+        value={inspectorCategory.slug || ""}
+        onChange={(e) =>
+          setInspectorCategory({
+            ...inspectorCategory,
+            slug: e.target.value,
+          })
+        }
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Typography
+                variant="caption"
+                sx={{ fontFamily: "monospace", color: "#6b7280" }}
+              >
+                /apparel/
+              </Typography>
+            </InputAdornment>
+          ),
+        }}
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 99,
+            backgroundColor: "#f3f4f6",
+            fontSize: 13,
+            fontFamily: "monospace",
+            "& fieldset": { border: "none" },
+          },
+        }}
+      />
+    </Box>
+
+    {/* 3. Description */}
+    <Box sx={{ mb: 2.2 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#374151"
+        display="block"
+        mb={0.7}
+      >
+        Description
+      </Typography>
+      <TextField
+        fullWidth
+        multiline
+        rows={2}
+        size="small"
+        placeholder="Category description..."
+        value={inspectorCategory.description || ""}
+        onChange={(e) =>
+          setInspectorCategory({
+            ...inspectorCategory,
+            description: e.target.value,
+          })
+        }
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 3,
+            backgroundColor: "#f3f4f6",
+            fontSize: 13,
+            "& fieldset": { border: "none" },
+          },
+        }}
+      />
+    </Box>
+
+    {/* 4. Assigned Departments */}
+    <Box sx={{ mb: 2.5 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#374151"
+        display="block"
+        mb={0.8}
+      >
+        Assigned Departments
+      </Typography>
+      <Stack direction="row" spacing={1}>
+        {[ {id:1, name :"Men"},{id: 2 , name :"Women"},{id:3, name: "Kids"}].map((dept) => {
+          const checked = ([inspectorCategory.department_id] || []).includes(
+            dept.id
+          );
+          return (
             <Box
+              key={dept}
+              onClick={() => handleInspectorDeptToggle(dept.id)}
               sx={{
+                flex: 1,
                 display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                mb: 2.5,
+                alignItems: "center",
+                gap: 0.6,
+                px: 1.2,
+                py: 0.7,
+                borderRadius: 99,
+                backgroundColor: "#f3f4f6",
+                cursor: "pointer",
+                userSelect: "none",
               }}
             >
-              <Box>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontWeight: 700,
-                    color: "#c2410c",
-                    letterSpacing: 0.8,
-                    display: "block",
-                  }}
-                >
-                  CURATOR INSPECTOR
-                </Typography>
-                <Typography variant="h6" fontWeight={700} color="#111827">
-                  {inspectorCategory.title}
-                </Typography>
-              </Box>
-              <IconButton
+              <Checkbox
                 size="small"
-                onClick={() => setInspectorCategory(null)}
-                sx={{ bgcolor: "#f3f4f6" }}
-              >
-                <Close fontSize="small" />
-              </IconButton>
-            </Box>
-
-            <Box sx={{ mb: 2.2 }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="#374151"
-                display="block"
-                mb={0.7}
-              >
-                Category Title
-              </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={inspectorCategory.title}
-                onChange={(e) =>
-                  setInspectorCategory({
-                    ...inspectorCategory,
-                    title: e.target.value,
-                  })
-                }
+                checked={checked}
                 sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 99,
-                    backgroundColor: "#f3f4f6",
-                    fontSize: 13,
-                    "& fieldset": { border: "none" },
-                  },
+                  p: 0,
+                  color: "#9ca3af",
+                  "&.Mui-checked": { color: "#0a0a0a" },
                 }}
               />
-            </Box>
-
-            <Box sx={{ mb: 2.2 }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="#374151"
-                display="block"
-                mb={0.7}
-              >
-                Storefront Permalink Slug
+              <Typography variant="caption" fontWeight={600}>
+                {dept.name}
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={inspectorCategory.slug}
-                onChange={(e) =>
-                  setInspectorCategory({
-                    ...inspectorCategory,
-                    slug: e.target.value,
-                  })
-                }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Typography
-                        variant="caption"
-                        sx={{ fontFamily: "monospace", color: "#6b7280" }}
-                      >
-                        /apparel/
-                      </Typography>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 99,
-                    backgroundColor: "#f3f4f6",
-                    fontSize: 13,
-                    fontFamily: "monospace",
-                    "& fieldset": { border: "none" },
-                  },
-                }}
-              />
             </Box>
+          );
+        })}
+      </Stack>
+    </Box>
 
-            <Box sx={{ mb: 2.5 }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="#374151"
-                display="block"
-                mb={0.8}
-              >
-                Assigned Departments
-              </Typography>
-              <Stack direction="row" spacing={1}>
-                {["Women", "Men", "Unisex"].map((dept) => {
-                  const checked = inspectorCategory.departments.includes(
-                    dept.toUpperCase()
-                  );
-                  return (
-                    <Box
-                      key={dept}
-                      onClick={() => handleInspectorDeptToggle(dept)}
-                      sx={{
-                        flex: 1,
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 0.6,
-                        px: 1.2,
-                        py: 0.7,
-                        borderRadius: 99,
-                        backgroundColor: "#f3f4f6",
-                        cursor: "pointer",
-                        userSelect: "none",
-                      }}
-                    >
-                      <Checkbox
-                        size="small"
-                        checked={checked}
-                        sx={{
-                          p: 0,
-                          color: "#9ca3af",
-                          "&.Mui-checked": { color: "#0a0a0a" },
-                        }}
-                      />
-                      <Typography variant="caption" fontWeight={600}>
-                        {dept}
-                      </Typography>
-                    </Box>
-                  );
-                })}
-              </Stack>
-            </Box>
+    {/* 5. Category Hero Banner (Click or Drag Upload) */}
+    <Box sx={{ mb: 2.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 1,
+        }}
+      >
+        <Typography variant="caption" fontWeight={700} color="#374151">
+          Category Hero Banner
+        </Typography>
+        <Typography variant="caption" color="text.secondary" fontSize={10}>
+          1200X400 • PNG/WEBP
+        </Typography>
+      </Box>
 
-            <Box sx={{ mb: 3 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 1,
-                }}
-              >
-                <Typography variant="caption" fontWeight={700} color="#374151">
-                  Category Hero Banner
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontSize={10}>
-                  1200X400 • PNG/WEBP
-                </Typography>
-              </Box>
+      <input
+        ref={inspectorFileInputRef}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(e) => handleInspectorImageChange(e.target.files?.[0])}
+      />
 
-              {inspectorCategory.bannerUrl && (
-                <Box
-                  component="img"
-                  src={inspectorCategory.bannerUrl}
-                  alt="Hero preview"
-                  sx={{
-                    width: "100%",
-                    height: 115,
-                    objectFit: "cover",
-                    borderRadius: 5,
-                    mb: 1.2,
-                    display: "block",
-                  }}
-                />
-              )}
+      {(inspectorCategory.bannerUrl || inspectorCategory.image) && (
+        <Box
+          component="img"
+          src={`http://localhost:8080/${inspectorCategory.image}`}
+          alt="Hero preview 123"
+          sx={{
+            width: "100%",
+            height: 115,
+            objectFit: "cover",
+            borderRadius: 5,
+            mb: 1.2,
+            display: "block",
+          }}
+        />
+      )}
 
-              <Box
-                sx={{
-                  border: "1.5px dashed #d1d5db",
-                  borderRadius: 5,
-                  p: 2,
-                  textAlign: "center",
-                  cursor: "pointer",
-                  backgroundColor: "#fafafa",
-                  "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f3f4f6" },
-                }}
-              >
-                <CloudUploadOutlined
-                  sx={{ fontSize: 20, color: "#6b7280", mb: 0.3 }}
-                />
-                <Typography
-                  variant="caption"
-                  fontWeight={600}
-                  display="block"
-                  color="#374151"
-                >
-                  Click or drag new banner asset here
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontSize={10}>
-                  MAX 5MB • OPTIMIZED WEBP RECOMMENDED
-                </Typography>
-              </Box>
-            </Box>
+      <Box
+        onClick={() => inspectorFileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => {
+          e.preventDefault();
+          handleInspectorImageChange(e.dataTransfer.files?.[0]);
+        }}
+        sx={{
+          border: "1.5px dashed #d1d5db",
+          borderRadius: 5,
+          p: 2,
+          textAlign: "center",
+          cursor: "pointer",
+          backgroundColor: "#fafafa",
+          "&:hover": { borderColor: "#9ca3af", backgroundColor: "#f3f4f6" },
+        }}
+      >
+        <CloudUploadOutlined
+          sx={{ fontSize: 20, color: "#6b7280", mb: 0.3 }}
+        />
+        <Typography
+          variant="caption"
+          fontWeight={600}
+          display="block"
+          color="#374151"
+        >
+          Click or drag new banner asset here
+        </Typography>
+        <Typography variant="caption" color="text.secondary" fontSize={10}>
+          MAX 5MB • OPTIMIZED WEBP RECOMMENDED
+        </Typography>
+      </Box>
+    </Box>
 
-            <Stack direction="row" spacing={1.5}>
-              <Button
-                fullWidth
-                onClick={handleDiscardInspector}
-                sx={{
-                  borderRadius: 99,
-                  textTransform: "none",
-                  backgroundColor: "#f3f4f6",
-                  color: "#374151",
-                  fontWeight: 600,
-                  py: 1,
-                  "&:hover": { backgroundColor: "#e5e7eb" },
-                }}
-              >
-                Discard
-              </Button>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={handleSaveInspector}
-                sx={{
-                  borderRadius: 99,
-                  textTransform: "none",
-                  backgroundColor: "#0a0a0a",
-                  color: "#fff",
-                  fontWeight: 600,
-                  py: 1,
-                  boxShadow: "none",
-                  "&:hover": { backgroundColor: "#262626", boxShadow: "none" },
-                }}
-              >
-                Save Category
-              </Button>
-            </Stack>
-          </Paper>
-        )}
+    {/* 6. Status Toggle (Active / Draft) */}
+    <Box
+      sx={{
+        p: 1.5,
+        mb: 3,
+        borderRadius: 3,
+        backgroundColor: "#f3f4f6",
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+      }}
+    >
+      <Box>
+        <Typography variant="caption" fontWeight={700} color="#111827" display="block">
+          Storefront Status
+        </Typography>
+        <Typography variant="caption" color="text.secondary" fontSize={11}>
+          {inspectorCategory.status === "active" || inspectorCategory.liveStatus
+            ? "Active (Published)"
+            : "Draft (Hidden)"}
+        </Typography>
+      </Box>
+      <Switch
+        size="small"
+        checked={
+          inspectorCategory.status === true 
+        }
+        onChange={(e) => {
+          const isActive = e.target.checked;
+          setInspectorCategory({
+            ...inspectorCategory,
+            status: isActive ? true : false,
+            liveStatus: isActive,
+            isDraft: !isActive,
+          });
+        }}
+        sx={{
+          "& .MuiSwitch-switchBase.Mui-checked": { color: "#fff" },
+          "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+            backgroundColor: "#0a0a0a",
+            opacity: 1,
+          },
+        }}
+      />
+    </Box>
+
+    {/* 7. Action Buttons */}
+    <Stack direction="row" spacing={1.5}>
+      <Button
+        fullWidth
+        onClick={handleDiscardInspector}
+        sx={{
+          borderRadius: 99,
+          textTransform: "none",
+          backgroundColor: "#f3f4f6",
+          color: "#374151",
+          fontWeight: 600,
+          py: 1,
+          "&:hover": { backgroundColor: "#e5e7eb" },
+        }}
+      >
+        Discard
+      </Button>
+      <Button
+        fullWidth
+        variant="contained"
+        onClick={handleSaveInspector}
+        sx={{
+          borderRadius: 99,
+          textTransform: "none",
+          backgroundColor: "#0a0a0a",
+          color: "#fff",
+          fontWeight: 600,
+          py: 1,
+          boxShadow: "none",
+          "&:hover": { backgroundColor: "#262626", boxShadow: "none" },
+        }}
+      >
+        Save Category
+      </Button>
+    </Stack>
+  </Paper>
+          )}
       </Box>
 
       {/* Create Category Dialog */}
-      <Dialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Create Category</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Category Title"
-              fullWidth
-              size="small"
-              value={newCategoryTitle}
-              onChange={(e) => setNewCategoryTitle(e.target.value)}
-            />
-            <TextField
-              label="Permalink Slug (optional)"
-              fullWidth
-              size="small"
-              placeholder="e.g. footwear"
-              value={newCategorySlug}
-              onChange={(e) => setNewCategorySlug(e.target.value)}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setCreateOpen(false)}
-            sx={{ textTransform: "none", color: "#6b7280" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateCategory}
-            sx={{
-              borderRadius: 99,
-              textTransform: "none",
-              backgroundColor: "#0a0a0a",
-              "&:hover": { backgroundColor: "#262626" },
-            }}
-          >
-            Create
-          </Button>
-        </DialogActions>
-      </Dialog>
+     <CreateCategoryDialogue
+        createOpen={createOpen}
+        setCreateOpen={setCreateOpen}
+     />
     </Box>
   );
 }

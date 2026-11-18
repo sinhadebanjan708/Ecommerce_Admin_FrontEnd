@@ -1,8 +1,8 @@
 
 import axios from "axios";
 
-const TOKEN_KEY = "token";
-const REFRESH_TOKEN_KEY = "refreshToken";
+const TOKEN_KEY = "access-token";
+const REFRESH_TOKEN_KEY = "refresh-token";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 

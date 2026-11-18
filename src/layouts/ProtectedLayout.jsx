@@ -17,6 +17,7 @@ import {
   Menu as MenuIcon,
 } from "@mui/icons-material";
 import * as actions from "../store/actions"
+import Alert from "../pages/Alert";
 import { logout } from "../store/slices/authSlice";
 
 export default function ProtectedLayout() {
@@ -34,6 +35,7 @@ export default function ProtectedLayout() {
 
   return (
     <Box sx={{ display: "flex", minHeight: "100vh", backgroundColor: "#f9fafb" }}>
+      
       {/* Left Sidebar */}
       <Sidebar
         collapsed={collapsed}
