@@ -51,93 +51,7 @@ import * as actions from "../store/actions";
 import { useSelector, useDispatch } from "react-redux";
 import CreateCategoryDialogue from "./CreateCategoryDialogue";
 
-const INITIAL_CATEGORIES = [
-  {
-    id: 1,
-    title: "T-Shirts",
-    slug: "t-shirts",
-    departments: ["MEN", "WOMEN", "UNISEX"],
-    subcategoriesCount: 4,
-    liveSkus: 54,
-    hasBanner: true,
-    bannerDimensions: "1200×400",
-    bannerUrl:
-      "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=800&q=80",
-    liveStatus: true,
-    isDraft: false,
-  },
-  {
-    id: 2,
-    title: "Shirts & Blouses",
-    slug: "shirts",
-    departments: ["MEN", "WOMEN"],
-    subcategoriesCount: 3,
-    liveSkus: 42,
-    hasBanner: true,
-    bannerDimensions: "1200×400",
-    bannerUrl:
-      "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?auto=format&fit=crop&w=800&q=80",
-    liveStatus: true,
-    isDraft: false,
-  },
-  {
-    id: 3,
-    title: "Trousers & Slacks",
-    slug: "trousers",
-    departments: ["MEN", "WOMEN", "UNISEX"],
-    subcategoriesCount: 3,
-    liveSkus: 61,
-    hasBanner: true,
-    bannerDimensions: "1200×400",
-    bannerUrl:
-      "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?auto=format&fit=crop&w=800&q=80",
-    liveStatus: true,
-    isDraft: false,
-  },
-  {
-    id: 4,
-    title: "Outerwear & Coats",
-    slug: "outerwear",
-    departments: ["WOMEN", "UNISEX"],
-    subcategoriesCount: 4,
-    liveSkus: 38,
-    hasBanner: true,
-    bannerDimensions: "1200×400",
-    bannerUrl:
-      "https://images.unsplash.com/photo-1539533018447-63fcce2678e3?auto=format&fit=crop&w=800&q=80",
-    liveStatus: true,
-    isDraft: false,
-  },
-  {
-    id: 5,
-    title: "Knitwear",
-    slug: "knitwear",
-    departments: ["WOMEN", "MEN"],
-    subcategoriesCount: 2,
-    liveSkus: 29,
-    hasBanner: true,
-    bannerDimensions: "1200×400",
-    bannerUrl:
-      "https://images.unsplash.com/photo-1576566588028-4147f3842f27?auto=format&fit=crop&w=800&q=80",
-    liveStatus: true,
-    isDraft: false,
-  },
-  {
-    id: 6,
-    title: "Accessories & Leather",
-    slug: "accessories",
-    departments: ["UNISEX"],
-    subcategoriesCount: 2,
-    liveSkus: 24,
-    hasBanner: false,
-    bannerDimensions: "",
-    bannerUrl: "",
-    liveStatus: false,
-    isDraft: true,
-  },
-];
-
-const ALL_DEPARTMENTS = ["All", "Women", "Men", "Unisex"];
+const ALL_DEPARTMENTS = ["All", "Women", "Men", "Kids"];
 
 const getDeptBadgeStyle = (dept) => {
   switch (dept) {
@@ -156,7 +70,7 @@ const mapCategoryData = (category) => ({
   id: category.id,
 
   // API field -> UI field
-  title: category.category_name,
+  title: category.categoryName,
 
   department_id: category.department_id,
 
@@ -185,7 +99,7 @@ const mapCategoryData = (category) => ({
 });
 
 export default function Category() {
-    const dispatch =useDispatch();
+  const dispatch =useDispatch();
   const categoryList = useSelector((state)=> state.category.categoryList)
   const totalRecords = useSelector((state)=> state.category.totalRecords)
   const [categories, setCategories] = useState([]);
@@ -198,7 +112,7 @@ export default function Category() {
     pageSize: 5,
   });
   const [createOpen, setCreateOpen] = React.useState(false);
-
+const [debouncedSearch, setDebouncedSearch] = useState("");
   // Curator Inspector state
   const [inspectorCategory, setInspectorCategory] = useState(
     null
@@ -213,21 +127,28 @@ export default function Category() {
     }
   }, [categoryList])
   
-  
-  React.useEffect(() => {
-    dispatch(actions.fetchAllCategoris(pagination?.pageIndex,pagination?.pageSize));
-  }, [pagination?.pageIndex,pagination?.pageSize]);
-  
-  React.useEffect(() => {
-    if (categoryList && categoryList.length > 0) {
-      const mappedCategories = categoryList.map(mapCategoryData);
-      
-      setCategories(mappedCategories);
-      
-      // Set the first API category as the selected category
-      setInspectorCategory(mappedCategories[0]);
+
+React.useEffect(() => {
+  if (categoryList) {
+    const mappedCategories = categoryList.map(mapCategoryData);
+
+    setCategories(categoryList);
+
+    if (mappedCategories.length > 0) {
+      setInspectorCategory(categoryList[0]);
+    } else {
+      setInspectorCategory(null);
     }
-  }, [categoryList]);
+  }
+}, [categoryList]);
+
+React.useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(searchQuery);
+  }, 500);
+
+  return () => clearTimeout(timer);
+}, [searchQuery]);
   
   console.log('inspector_category__edit',inspectorCategory)
   
@@ -236,30 +157,50 @@ export default function Category() {
     ...prev,
     pageIndex: 0,
   }));
-}, [searchQuery, selectedDept, statusFilter]);
+}, [debouncedSearch, selectedDept, statusFilter]);
+
+React.useEffect(() => {
+  dispatch(
+    actions.fetchAllCategoris(
+      pagination.pageIndex,
+      pagination.pageSize,
+      debouncedSearch,
+      statusFilter === "ALL" ? "" : statusFilter,
+      selectedDept === "All" ? "" : selectedDept
+    )
+  );
+}, [
+  dispatch,
+  pagination.pageIndex,
+  pagination.pageSize,
+  debouncedSearch,
+  statusFilter,
+  selectedDept,
+]);
 
   console.log('categoryList',categoryList)
 
   // Filtered categories
-  const filteredCategories = useMemo(() => {
-    return categories.filter((cat) => {
-      const matchesSearch =
-        cat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        cat.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        String(cat.id).includes(searchQuery);
+  // const filteredCategories = useMemo(() => {
+  //   return categories.filter((cat) => {
+  //     console.log('filter_categories',cat)
+  //     const matchesSearch =
+  //       cat.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //       cat.slug.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //       String(cat.id).includes(searchQuery);
 
-      const matchesDept =
-        selectedDept === "All" ||
-        cat.departments.includes(selectedDept.toUpperCase());
+  //     const matchesDept =
+  //       selectedDept === "All" ||
+  //       cat.departments.includes(selectedDept.toUpperCase());
 
-      const matchesStatus =
-        statusFilter === "ALL" ||
-        (statusFilter === "LIVE" && cat.liveStatus) ||
-        (statusFilter === "DRAFT" && !cat.liveStatus);
+  //     const matchesStatus =
+  //       statusFilter === "ALL" ||
+  //       (statusFilter === "LIVE" && cat.liveStatus) ||
+  //       (statusFilter === "DRAFT" && !cat.liveStatus);
 
-      return matchesSearch && matchesDept && matchesStatus;
-    });
-  }, [categories, searchQuery, selectedDept, statusFilter]);
+  //     return matchesSearch && matchesDept && matchesStatus;
+  //   });
+  // }, [categories, searchQuery, selectedDept, statusFilter]);
 
   const handleToggleStatus = (id) => {
     setCategories((prev) =>
@@ -272,14 +213,14 @@ export default function Category() {
   // Material React Table Columns
   const columns = useMemo(
     () => [
-      {
-        id: "drag",
-        header: "",
-        size: 36,
-        enableSorting: false,
-        enableColumnActions: false,
-        Cell: () => <DragHandle sx={{ fontSize: 18, color: "#9ca3af" }} />,
-      },
+      // {
+      //   id: "drag",
+      //   header: "",
+      //   size: 36,
+      //   enableSorting: false,
+      //   enableColumnActions: false,
+      //   Cell: () => <DragHandle sx={{ fontSize: 18, color: "#9ca3af" }} />,
+      // },
       {
         accessorKey: "image",
         header: "VISUAL",
@@ -289,7 +230,7 @@ export default function Category() {
           const cat = row.original;
           return cat.image ? (
             <Avatar
-              src={`http://localhost:8080/${cat.image}`}
+              src={`http://localhost:5000/api/ecommerce/${cat.image}`}
               alt={cat.title}
               sx={{ width: 46, height: 46 }}
             />
@@ -308,7 +249,7 @@ export default function Category() {
         },
       },
       {
-        accessorKey: "category_name",
+        accessorKey: "categoryName",
         header: "CATEGORY",
         size: 185,
         Cell: ({ row }) => {
@@ -317,9 +258,9 @@ export default function Category() {
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Typography variant="body2" fontWeight={700} color="#111827">
-                  {cat.title}
+                  {cat.categoryName}
                 </Typography>
-                {cat.isDraft && (
+                {row.original.status?.toLowerCase() == "draft" && (
                   <Chip
                     label="DRAFT"
                     size="small"
@@ -372,12 +313,13 @@ export default function Category() {
         Cell: ({ row }) => (
            <Tooltip 
            title={
-    row.original.subcategories?.length
-      ? row.original.subcategories
-          .map((item, idx) => `${idx + 1}. ${item.subcategory_name}`)
-          .join("  ")
-      : ""
-  }>
+                row.original.subcategories?.length
+                  ? row.original.subcategories
+                      .map((item, idx) => `${idx + 1}. ${item.subcategoryName}`)
+                      .join("  ")
+                  : ""
+              }
+              >
             <Chip
             label={`Subcategories (${row.original.subcategories?.length || 0})`}
             deleteIcon={<ArrowForward sx={{ fontSize: 14 }} />}
@@ -467,7 +409,7 @@ export default function Category() {
           <Box onClick={(e) => e.stopPropagation()}>
             <Switch
               size="small"
-              checked={row.original.status}
+              checked={row.original.status === "active" ? true :false}
               onChange={() => handleToggleStatus(row.original.id)}
               sx={{
                 "& .MuiSwitch-switchBase.Mui-checked": {
@@ -683,7 +625,7 @@ export default function Category() {
 //   });
 const table = useMaterialReactTable({
   columns,
-  data: filteredCategories,
+  data: categories,
 
   getRowId: (row) => String(row.id),
 
@@ -784,7 +726,7 @@ rowCount: totalRecords,
             letterSpacing: 0.5,
           }}
         >
-          {filteredCategories.length} CATEGORIES LOADED
+          {totalRecords } CATEGORIES LOADED
         </Typography>
       </Box>
 
@@ -957,10 +899,16 @@ const handleInspectorImageChange = (file) => {
 
 // Department selection handler (maps to department_id: 1 | 2 | 3)
 const handleInspectorDeptToggle = (deptId) => {
-  setInspectorCategory((prev) => ({
-    ...prev,
-    department_id: prev.department_id === deptId ? null : deptId,
-  }));
+  setInspectorCategory((prev) => {
+    const currentDeptId = prev.department?.id ?? null;
+    const newDeptId = currentDeptId === deptId ? null : deptId;
+
+    return {
+      ...prev,
+      departmentId: newDeptId,
+      department: newDeptId ? { id: newDeptId } : null,
+    };
+  });
 };
 
   // Create Category Handler
@@ -1434,13 +1382,11 @@ const handleInspectorDeptToggle = (deptId) => {
       <TextField
         fullWidth
         size="small"
-        value={inspectorCategory.title ?? inspectorCategory.category_name ?? ""}
+        value={ inspectorCategory.categoryName ?? ""}
         onChange={(e) =>
           setInspectorCategory({
             ...inspectorCategory,
-            title: e.target.value,
-            name: e.target.value,
-            category_name: e.target.value,
+            categoryName: e.target.value,
           })
         }
         sx={{
@@ -1546,43 +1492,47 @@ const handleInspectorDeptToggle = (deptId) => {
         Assigned Departments
       </Typography>
       <Stack direction="row" spacing={1}>
-        {[ {id:1, name :"Men"},{id: 2 , name :"Women"},{id:3, name: "Kids"}].map((dept) => {
-          const checked = ([inspectorCategory.department_id] || []).includes(
-            dept.id
-          );
-          return (
-            <Box
-              key={dept}
-              onClick={() => handleInspectorDeptToggle(dept.id)}
-              sx={{
-                flex: 1,
-                display: "flex",
-                alignItems: "center",
-                gap: 0.6,
-                px: 1.2,
-                py: 0.7,
-                borderRadius: 99,
-                backgroundColor: "#f3f4f6",
-                cursor: "pointer",
-                userSelect: "none",
-              }}
-            >
-              <Checkbox
-                size="small"
-                checked={checked}
-                sx={{
-                  p: 0,
-                  color: "#9ca3af",
-                  "&.Mui-checked": { color: "#0a0a0a" },
-                }}
-              />
-              <Typography variant="caption" fontWeight={600}>
-                {dept.name}
-              </Typography>
-            </Box>
-          );
-        })}
-      </Stack>
+  {[
+  { id: 1, name: "Men" },
+  { id: 2, name: "Women" },
+  { id: 3, name: "Kids" },
+].map((dept) => {
+  const checked = inspectorCategory?.department?.id === dept.id;
+
+  return (
+    <Box
+      key={dept.id}
+      onClick={() => handleInspectorDeptToggle(dept.id)}
+      sx={{
+        flex: 1,
+        display: "flex",
+        alignItems: "center",
+        gap: 0.6,
+        px: 1.2,
+        py: 0.7,
+        borderRadius: 99,
+        backgroundColor: "#f3f4f6",
+        cursor: "pointer",
+        userSelect: "none",
+      }}
+    >
+      <Checkbox
+        size="small"
+        checked={checked}
+        sx={{
+          p: 0,
+          color: "#9ca3af",
+          "&.Mui-checked": { color: "#0a0a0a" },
+        }}
+      />
+
+      <Typography variant="caption" fontWeight={600}>
+        {dept.name}
+      </Typography>
+    </Box>
+  );
+})}
+</Stack>
     </Box>
 
     {/* 5. Category Hero Banner (Click or Drag Upload) */}
@@ -1614,7 +1564,7 @@ const handleInspectorDeptToggle = (deptId) => {
       {(inspectorCategory.bannerUrl || inspectorCategory.image) && (
         <Box
           component="img"
-          src={`http://localhost:8080/${inspectorCategory.image}`}
+          src={`http://localhost:5000/api/ecommerce/${inspectorCategory.image}`}
           alt="Hero preview 123"
           sx={{
             width: "100%",

@@ -12,13 +12,13 @@ import {
 // import JSEncrypt from "jsencrypt";
 
 
-export const fetchAllCategoris = (pageIndex,pageSize) => async (dispatch) => {
+export const fetchAllCategoris = (pageIndex,pageSize,search) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await fetchCategoryService(pageIndex,pageSize);
+    const response = await fetchCategoryService(pageIndex,pageSize,search);
 
-    dispatch(storeCategoryList(response));
+    dispatch(storeCategoryList(response?.data));
      dispatch(globalLoaderClose());
     // dispatch(
     //   showAlert({
