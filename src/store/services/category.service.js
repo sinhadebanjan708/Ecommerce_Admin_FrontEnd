@@ -6,8 +6,19 @@ let token = localStorage.getItem("access-token");
 export const fetchCategoryService = (pageIndex,pageSize,search) => {
   return new Promise(async (resolve, reject) => {
     try {
-      let response = await axiosInstance.get(
+      let response;
+      if(search){
+        response = await axiosInstance.get(
         `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}&search=${search}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }, // request body (empty)
+      );
+      }
+       response = await axiosInstance.get(
+        `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -46,9 +57,9 @@ export const createCategoryService = async (payload) => {
 export const updateCategoryService = async (id , payload) => {
   const formData = new FormData();
 
-  formData.append("name", payload.title);
+  formData.append("categoryName", payload.categoryName);
   formData.append("slug", payload.slug);
-  formData.append("department_id", payload.department_id);
+  formData.append("departmentId", payload.department.id);
   formData.append("description", payload.description || "");
   formData.append("status", payload.status === true ? "active" : "draft" ); // e.g., "ACTIVE" / "DRAFT" or boolean
 

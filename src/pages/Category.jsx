@@ -260,7 +260,7 @@ React.useEffect(() => {
                 <Typography variant="body2" fontWeight={700} color="#111827">
                   {cat.categoryName}
                 </Typography>
-                {row.original.status?.toLowerCase() == "draft" && (
+                {String(row.original.status ?? "").toLowerCase() == "draft" && (
                   <Chip
                     label="DRAFT"
                     size="small"
@@ -1564,7 +1564,8 @@ const handleInspectorDeptToggle = (deptId) => {
       {(inspectorCategory.bannerUrl || inspectorCategory.image) && (
         <Box
           component="img"
-          src={`http://localhost:5000/api/ecommerce/${inspectorCategory.image}`}
+          src={inspectorCategory.bannerUrl ||
+      `http://localhost:5000/api/ecommerce/${inspectorCategory.image}`}
           alt="Hero preview 123"
           sx={{
             width: "100%",
@@ -1636,7 +1637,7 @@ const handleInspectorDeptToggle = (deptId) => {
       <Switch
         size="small"
         checked={
-          inspectorCategory.status === true 
+          inspectorCategory.status === "active" ? true : false 
         }
         onChange={(e) => {
           const isActive = e.target.checked;
