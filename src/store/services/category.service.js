@@ -16,15 +16,16 @@ export const fetchCategoryService = (pageIndex,pageSize,search) => {
           },
         }, // request body (empty)
       );
+      }else{
+        response = await axiosInstance.get(
+         `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+         {
+           headers: {
+             Authorization: `Bearer ${token}`,
+           },
+         }, // request body (empty)
+       );
       }
-       response = await axiosInstance.get(
-        `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }, // request body (empty)
-      );
       resolve(response?.data);
     } catch (err) {
       reject(err);

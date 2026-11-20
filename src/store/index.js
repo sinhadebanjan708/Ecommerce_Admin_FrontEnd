@@ -4,6 +4,7 @@ import postsReducer from "./slices/postsSlice";
 import globalReducer from "./slices/globalSlice";
 import categoryReducer from "./slices/categorySlice";
 import alertReducer from "./slices/alertSlice";
+import subcategoryReducer from "./slices/subcategorySlice";
 
 const store = configureStore({
   reducer: {
@@ -11,7 +12,8 @@ const store = configureStore({
     posts: postsReducer,
     global: globalReducer,
     category: categoryReducer,
-    alert:alertReducer
+    alert:alertReducer,
+    subcategory:subcategoryReducer,
   },
 });
 

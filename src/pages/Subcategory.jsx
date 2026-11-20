@@ -50,6 +50,8 @@ import {
   ExpandMore,
   Check,
 } from "@mui/icons-material";
+import { useDispatch,useSelector } from "react-redux";
+import * as actions from "../store/actions"
 
 const ROOT_CATEGORIES_DATA = [
   {
@@ -328,14 +330,45 @@ const ROOT_CATEGORIES_DATA = [
 
 export default function Subcategories() {
   const navigate = useNavigate();
-
+  const dispatch = useDispatch();
+  const subcategoryList = useSelector((state)=> state.subcategory.subcategoryList)
+    const totalRecords = useSelector((state)=> state.subcategory.totalRecords)
   // Store all categories in state so edits persist when switching categories in the dropdown
   const [allCategories, setAllCategories] = useState(ROOT_CATEGORIES_DATA);
   const [selectedCategoryId, setSelectedCategoryId] = useState(1);
-
+    const [pagination, setPagination] = React.useState({
+      pageIndex: 0,
+      pageSize: 5,
+    });
+const [rowSelection, setRowSelection] = useState({});
   // Header Category Dropdown Menu Anchor
   const [categoryMenuAnchor, setCategoryMenuAnchor] = useState(null);
   const categoryMenuOpen = Boolean(categoryMenuAnchor);
+    const [search, setSearch] = React.useState("");
+const [debouncedSearch, setDebouncedSearch] = React.useState("");
+const [searchQuery, setSearchQuery] = useState("");
+
+const [statusTab, setStatusTab] = useState("ALL"); // ALL | ACTIVE | DRAFT
+const [sortAsc, setSortAsc] = useState(true);
+
+// Right Inspector State
+const [inspectorItem, setInspectorItem] = useState(
+  ROOT_CATEGORIES_DATA[0].subcategories[0]
+);
+
+// Add New Subcategory Modal State
+const [addOpen, setAddOpen] = useState(false);
+const [newName, setNewName] = useState("");
+const [newSku, setNewSku] = useState("");
+const [newTagline, setNewTagline] = useState("");
+
+
+  React.useEffect(()=>{
+      dispatch(actions.fetchAllSubCategoris(pagination?.pageIndex,pagination?.pageSize,debouncedSearch))
+  },[dispatch, pagination?.pageIndex,pagination?.pageSize,debouncedSearch])
+
+
+  console.log('subcategoryList__',subcategoryList,totalRecords)
 
   const currentCategory = useMemo(
     () =>
@@ -346,20 +379,6 @@ export default function Subcategories() {
 
   const subcategories = currentCategory.subcategories;
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusTab, setStatusTab] = useState("ALL"); // ALL | ACTIVE | DRAFT
-  const [sortAsc, setSortAsc] = useState(true);
-
-  // Right Inspector State
-  const [inspectorItem, setInspectorItem] = useState(
-    ROOT_CATEGORIES_DATA[0].subcategories[0]
-  );
-
-  // Add New Subcategory Modal State
-  const [addOpen, setAddOpen] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newSku, setNewSku] = useState("");
-  const [newTagline, setNewTagline] = useState("");
 
   // Switch Root Category from Dropdown
   const handleSelectCategory = (cat) => {
@@ -387,24 +406,31 @@ export default function Subcategories() {
   const totalProducts = subcategories.reduce((sum, s) => sum + s.itemsCount, 0);
 
   // Filtered & Ranked Data
-  const filteredSubcategories = useMemo(() => {
-    return subcategories
-      .filter((item) => {
-        const q = searchQuery.toLowerCase();
-        const matchesSearch =
-          item.name.toLowerCase().includes(q) ||
-          item.slug.toLowerCase().includes(q) ||
-          item.skuCode.toLowerCase().includes(q);
+  React.useEffect(() => {
+  const timer = setTimeout(() => {
+    setDebouncedSearch(search.trim());
+  }, 500);
 
-        const matchesTab =
-          statusTab === "ALL" ||
-          (statusTab === "ACTIVE" && item.status) ||
-          (statusTab === "DRAFT" && !item.status);
+  return () => clearTimeout(timer);
+}, [search]);
+  // const filteredSubcategories = useMemo(() => {
+  //   return subcategories
+  //     .filter((item) => {
+  //       const q = searchQuery.toLowerCase();
+  //       const matchesSearch =
+  //         item.name.toLowerCase().includes(q) ||
+  //         item.slug.toLowerCase().includes(q) ||
+  //         item.skuCode.toLowerCase().includes(q);
 
-        return matchesSearch && matchesTab;
-      })
-      .sort((a, b) => (sortAsc ? a.rank - b.rank : b.rank - a.rank));
-  }, [subcategories, searchQuery, statusTab, sortAsc]);
+  //       const matchesTab =
+  //         statusTab === "ALL" ||
+  //         (statusTab === "ACTIVE" && item.status) ||
+  //         (statusTab === "DRAFT" && !item.status);
+
+  //       return matchesSearch && matchesTab;
+  //     })
+  //     .sort((a, b) => (sortAsc ? a.rank - b.rank : b.rank - a.rank));
+  // }, [subcategories, searchQuery, statusTab, sortAsc]);
 
   const handleToggleStatus = (id) => {
     updateCurrentSubcategories((list) =>
@@ -425,31 +451,33 @@ export default function Subcategories() {
   const columns = useMemo(
     () => [
       {
-        accessorKey: "rank",
+        accessorKey: "id",
         header: "RANK",
         size: 70,
         Cell: ({ row }) => (
           <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
             <DragIndicator sx={{ fontSize: 16, color: "#9ca3af" }} />
             <Typography variant="body2" fontWeight={700} color="#111827">
-              {row.original.rank}
+              {row.original.id}
             </Typography>
           </Box>
         ),
       },
       {
-        accessorKey: "name",
+        accessorKey: "subcategoryName",
         header: "SUBCATEGORY & VISUAL",
         size: 215,
         Cell: ({ row }) => {
           const item = row.original;
+          const image = row.original.image;
+          console.log('bhao__',image)
           return (
             <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
               <Box sx={{ position: "relative", flexShrink: 0 }}>
                 <Avatar
                   variant="rounded"
-                  src={item.thumbnailUrl}
-                  alt={item.name}
+                  src={`http://localhost:5000/api/ecommerce${item.image}`}
+                  alt={"cannot render"}
                   sx={{
                     width: 46,
                     height: 46,
@@ -478,18 +506,8 @@ export default function Subcategories() {
               <Box>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.7 }}>
                   <Typography variant="body2" fontWeight={700} color="#111827">
-                    {item.name}
+                    {item.subcategoryName}
                   </Typography>
-                  {item.isFeatured && (
-                    <Box
-                      sx={{
-                        width: 6,
-                        height: 6,
-                        borderRadius: "50%",
-                        bgcolor: "#c2410c",
-                      }}
-                    />
-                  )}
                 </Box>
                 <Typography
                   variant="caption"
@@ -497,7 +515,7 @@ export default function Subcategories() {
                 >
                   {item.slug}
                 </Typography>
-                <Typography
+                {/* <Typography
                   variant="caption"
                   sx={{
                     fontFamily: "monospace",
@@ -507,14 +525,14 @@ export default function Subcategories() {
                   }}
                 >
                   {item.skuCode}
-                </Typography>
+                </Typography> */}
               </Box>
             </Box>
           );
         },
       },
       {
-        accessorKey: "itemsCount",
+        accessorKey: "productCount",
         header: "ITEMS",
         size: 95,
         muiTableHeadCellProps: { align: "right" },
@@ -527,7 +545,7 @@ export default function Subcategories() {
               color="#111827"
               lineHeight={1.2}
             >
-              {row.original.itemsCount}
+              {row.original.productCount}
             </Typography>
             <Typography
               variant="caption"
@@ -553,7 +571,7 @@ export default function Subcategories() {
           <Box onClick={(e) => e.stopPropagation()}>
             <Switch
               size="small"
-              checked={row.original.status}
+              checked={row.original.status == "active" ? true : false}
               onChange={() => handleToggleStatus(row.original.id)}
               sx={{
                 "& .MuiSwitch-switchBase.Mui-checked": {
@@ -621,15 +639,25 @@ export default function Subcategories() {
   // Material React Table Instance
   const table = useMaterialReactTable({
     columns,
-    data: filteredSubcategories,
+    data:Array.isArray(subcategoryList) ? subcategoryList : [],
     getRowId: (row) => String(row.id),
     enableTopToolbar: false,
-    enableBottomToolbar: false,
+      enableBottomToolbar: true, 
     enableColumnActions: false,
     enableColumnFilters: false,
     enableGlobalFilter: false,
     enableSorting: false,
-    enablePagination: false,
+    enablePagination: true,
+    manualPagination: true,
+    rowCount: totalRecords,
+    onPaginationChange: setPagination,
+    onRowSelectionChange: setRowSelection,
+  // Controlled states
+  state: {
+    rowSelection,
+    pagination,
+  },
+
     muiTablePaperProps: {
       elevation: 0,
       sx: {
@@ -1168,8 +1196,8 @@ export default function Subcategories() {
             <TextField
               size="small"
               placeholder="Search by name, slug or prefix.."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               sx={{
                 minWidth: { xs: "100%", sm: 235 },
                 "& .MuiOutlinedInput-root": {
