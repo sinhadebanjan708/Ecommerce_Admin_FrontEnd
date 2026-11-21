@@ -121,12 +121,38 @@ const [debouncedSearch, setDebouncedSearch] = useState("");
   // const [createOpen, setCreateOpen] = useState(false);
   // const [newCategoryTitle, setNewCategoryTitle] = useState("");
   // const [newCategorySlug, setNewCategorySlug] = useState("");
+  // React.useEffect(() => {
+  //   if(categoryList && categoryList.length > 0){
+  //     setInspectorCategory(categoryList[0])
+  //   }
+  // }, [categoryList])
   React.useEffect(() => {
-    if(categoryList && categoryList.length > 0){
-      setInspectorCategory(categoryList[0])
-    }
-  }, [categoryList])
-  
+      console.log("FETCH CATEGORY EFFECT EXECUTED");
+
+  console.log({
+    pageIndex: pagination.pageIndex,
+    pageSize: pagination.pageSize,
+    debouncedSearch,
+    statusFilter,
+    selectedDept,
+  });
+  dispatch(
+    actions.fetchAllCategoris(
+      pagination.pageIndex,
+      pagination.pageSize,
+      debouncedSearch,
+      statusFilter === "ALL" ? "" : statusFilter,
+      selectedDept === "All" ? "" : selectedDept
+    )
+  );
+}, [
+  dispatch,
+  pagination.pageIndex,
+  pagination.pageSize,
+  debouncedSearch,
+  statusFilter,
+  selectedDept,
+]);
 
 React.useEffect(() => {
   if (categoryList) {
@@ -159,26 +185,13 @@ React.useEffect(() => {
   }));
 }, [debouncedSearch, selectedDept, statusFilter]);
 
-React.useEffect(() => {
-  dispatch(
-    actions.fetchAllCategoris(
-      pagination.pageIndex,
-      pagination.pageSize,
-      debouncedSearch,
-      statusFilter === "ALL" ? "" : statusFilter,
-      selectedDept === "All" ? "" : selectedDept
-    )
-  );
-}, [
-  dispatch,
-  pagination.pageIndex,
+
+
+  console.log('categoryList', pagination.pageIndex,
   pagination.pageSize,
   debouncedSearch,
   statusFilter,
-  selectedDept,
-]);
-
-  console.log('categoryList',categoryList)
+  selectedDept,)
 
   // Filtered categories
   // const filteredCategories = useMemo(() => {

@@ -14,7 +14,10 @@ const subcategorySlice = createSlice({
   initialState,
   reducers: {
     storeSubcategoryList(state,action){
-      state.subcategoryList = action.payload.content
+      const response = action.payload?.data;
+      state.subcategoryList = Array.isArray(response)
+    ? response
+    : response?.content ?? [];
       state.totalRecords= action.payload.totalElements
     }
   },

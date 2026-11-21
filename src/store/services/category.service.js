@@ -3,34 +3,27 @@ const baseURl = "https://plenty-constant-residual.ngrok-free.dev";
 
 let token = localStorage.getItem("access-token");
 
-export const fetchCategoryService = (pageIndex,pageSize,search) => {
-  return new Promise(async (resolve, reject) => {
-    try {
-      let response;
-      if(search){
-        response = await axiosInstance.get(
-        `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}&search=${search}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }, // request body (empty)
-      );
-      }else{
-        response = await axiosInstance.get(
-         `categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-         {
-           headers: {
-             Authorization: `Bearer ${token}`,
-           },
-         }, // request body (empty)
-       );
-      }
-      resolve(response?.data);
-    } catch (err) {
-      reject(err);
-    }
-  });
+export const fetchCategoryService = async (
+  pageIndex,
+  pageSize,
+  search
+) => {
+  try {
+    const response = await axiosInstance.get("categories/", {
+      params: {
+        pageIndex,
+        pageSize,
+        ...(search ? { search } : {}),
+      },
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    return response.data;
+  } catch (err) {
+    throw err;
+  }
 };
 
 export const createCategoryService = async (payload) => {

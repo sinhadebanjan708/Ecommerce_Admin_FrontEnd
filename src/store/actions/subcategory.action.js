@@ -1,4 +1,4 @@
-import { fetchsubCategoryService  }
+import { fetchsubCategoryService, createSubCategoryService, fetchSubCategoryBycategoryId, updateSubCategoryService }
  from "../services/subcategory.service";
 // import { showAlert } from "../slices/alertSlice";
 import {
@@ -18,7 +18,7 @@ export const fetchAllSubCategoris = (pageIndex,pageSize,search) => async (dispat
     // response shape: { employee: {...}, menus: [...] }
     const response = await fetchsubCategoryService(pageIndex,pageSize,search);
 
-    dispatch(storeSubcategoryList(response?.data));
+    dispatch(storeSubcategoryList(response));
      dispatch(globalLoaderClose());
     // dispatch(
     //   showAlert({
@@ -47,21 +47,55 @@ export const fetchAllSubCategoris = (pageIndex,pageSize,search) => async (dispat
     // dispatch(globalLoaderClose());
   }
 };
-
-export const createCategory = (payload) => async (dispatch) => {
+export const fetchSubCategoryByCategoryId = (categoryId) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await createCategoryService(payload);
+    const response = await fetchSubCategoryBycategoryId(categoryId);
+
+    dispatch(storeSubcategoryList(response));
+     dispatch(globalLoaderClose());
+    // dispatch(
+    //   showAlert({
+    //     type: "success",
+    //     title: "Login Successful",
+    //     message: `Welcome back, ${response.employee?.employeeName || ""}!`,
+    //   }),
+    // );
+
+    return { success: true, data: response };
+  } catch (err) {
+    // err shape from API: { timestamp, status, error, message }
+    const message = err?.message || "Login failed";
+    dispatch(globalLoaderClose());
+    // dispatch(loginFailure(message));
+    // dispatch(
+    //   showAlert({
+    //     type: "error",
+    //     title: err?.error || "Login Failed",
+    //     message,
+    //   }),
+    // );
+
+    return { success: false, message };
+  } finally {
+    // dispatch(globalLoaderClose());
+  }
+};
+export const createSubCategory = (payload) => async (dispatch) => {
+  try {
+    dispatch(globalLoaderOpen());
+    // response shape: { employee: {...}, menus: [...] }
+    const response = await createSubCategoryService(payload);
 
     // dispatch(storeCategoryList(response));
-     dispatch(fetchAllCategoris(0,5))
+     dispatch(fetchAllSubCategoris(0,5))
      dispatch(globalLoaderClose());
     dispatch(
       showAlert({
         type: "success",
         title: "Successful",
-        message: `Category Created Successfully`,
+        message: `Sub Category Created Successfully`,
       }),
     );
 
@@ -85,20 +119,20 @@ export const createCategory = (payload) => async (dispatch) => {
   }
 };
 
-export const updateCategory = (categoryId,payload) => async (dispatch) => {
+export const updatesubCategory = (pagination,subcategoryId,payload) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await updateCategoryService(categoryId , payload);
+    const response = await updateSubCategoryService(subcategoryId , payload);
 
     // dispatch(storeCategoryList(response));
-     dispatch(fetchAllCategoris(0,5))
+     dispatch(fetchAllSubCategoris(pagination?.pageIndex,pagination?.pageSize))
      dispatch(globalLoaderClose());
     dispatch(
       showAlert({
         type: "success",
         title: "Successful",
-        message: `Category Created Successfully`,
+        message: `Sub Category upadted Successfully`,
       }),
     );
 

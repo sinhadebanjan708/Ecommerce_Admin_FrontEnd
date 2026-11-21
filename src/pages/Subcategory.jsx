@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   MaterialReactTable,
@@ -24,10 +24,10 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+    FormControl,
+  InputLabel,
+  Select
+
 } from "@mui/material";
 import {
   ArrowBack,
@@ -52,6 +52,7 @@ import {
 } from "@mui/icons-material";
 import { useDispatch,useSelector } from "react-redux";
 import * as actions from "../store/actions"
+import CreateSubCategory from "./CreateSubCategory";
 
 const ROOT_CATEGORIES_DATA = [
   {
@@ -329,12 +330,17 @@ const ROOT_CATEGORIES_DATA = [
 ];
 
 export default function Subcategories() {
+    const categoryList = useSelector(
+      (state) => state.category.categoryList
+    );
+  
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const subcategoryList = useSelector((state)=> state.subcategory.subcategoryList)
     const totalRecords = useSelector((state)=> state.subcategory.totalRecords)
   // Store all categories in state so edits persist when switching categories in the dropdown
   const [allCategories, setAllCategories] = useState(ROOT_CATEGORIES_DATA);
+  const [inspectorsubCategory, setInspectorSubCategory] = useState(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState(1);
     const [pagination, setPagination] = React.useState({
       pageIndex: 0,
@@ -352,9 +358,9 @@ const [statusTab, setStatusTab] = useState("ALL"); // ALL | ACTIVE | DRAFT
 const [sortAsc, setSortAsc] = useState(true);
 
 // Right Inspector State
-const [inspectorItem, setInspectorItem] = useState(
-  ROOT_CATEGORIES_DATA[0].subcategories[0]
-);
+// const [inspectorsubCategory, setInspectorItem] = useState(
+//   ROOT_CATEGORIES_DATA[0].subcategories[0]
+// );
 
 // Add New Subcategory Modal State
 const [addOpen, setAddOpen] = useState(false);
@@ -363,27 +369,45 @@ const [newSku, setNewSku] = useState("");
 const [newTagline, setNewTagline] = useState("");
 
 
+React.useEffect(()=>{
+  dispatch(actions.fetchAllCategoris())
+},[dispatch])
+
   React.useEffect(()=>{
       dispatch(actions.fetchAllSubCategoris(pagination?.pageIndex,pagination?.pageSize,debouncedSearch))
-  },[dispatch, pagination?.pageIndex,pagination?.pageSize,debouncedSearch])
+},[dispatch, pagination?.pageIndex,pagination?.pageSize,debouncedSearch])
 
 
-  console.log('subcategoryList__',subcategoryList,totalRecords)
+  React.useEffect(() => {
+    if(subcategoryList && subcategoryList.length > 0){
+      setInspectorSubCategory(subcategoryList[0])
+    }
+  }, [subcategoryList])
+  
+  const currentCategory = useMemo(() => {
+    if (!Array.isArray(categoryList) || categoryList.length === 0) {
+      return null;
+    }
+    
+    return (
+      categoryList.find(
+        (category) => category.id === inspectorsubCategory?.categoryId
+      ) ?? categoryList[0]
+    );
+  }, [categoryList, inspectorsubCategory?.categoryId]);
 
-  const currentCategory = useMemo(
-    () =>
-      allCategories.find((c) => c.id === selectedCategoryId) ||
-      allCategories[0],
-    [allCategories, selectedCategoryId]
-  );
 
-  const subcategories = currentCategory.subcategories;
+  console.log('subcategoryList__123',currentCategory )
+
+  // const subcategories = currentCategory.subcategories;
 
 
   // Switch Root Category from Dropdown
   const handleSelectCategory = (cat) => {
+    console.log('changa__',cat)
     setSelectedCategoryId(cat.id);
-    setInspectorItem(cat.subcategories[0] || null);
+    // setInspectorItem(cat.subcategories[0] || null);
+    dispatch(actions.fetchSubCategoryByCategoryId(cat.id))
     setSearchQuery("");
     setStatusTab("ALL");
     setCategoryMenuAnchor(null);
@@ -393,7 +417,7 @@ const [newTagline, setNewTagline] = useState("");
   const updateCurrentSubcategories = (updaterFn) => {
     setAllCategories((prev) =>
       prev.map((cat) =>
-        cat.id === currentCategory.id
+        cat.id === inspectorsubCategory.id
           ? { ...cat, subcategories: updaterFn(cat.subcategories) }
           : cat
       )
@@ -401,9 +425,25 @@ const [newTagline, setNewTagline] = useState("");
   };
 
   // Counts for Filter Tabs
-  const activeCount = subcategories.filter((s) => s.status).length;
-  const draftCount = subcategories.filter((s) => !s.status).length;
-  const totalProducts = subcategories.reduce((sum, s) => sum + s.itemsCount, 0);
+  // const activeCount = subcategories.filter((s) => s.status).length;
+  // const draftCount = subcategories.filter((s) => !s.status).length;
+  // const totalProducts = subcategories.reduce((sum, s) => sum + s.itemsCount, 0);
+  const subcategories = Array.isArray(subcategoryList)
+  ? subcategoryList
+  : [];
+
+const activeCount = subcategories.filter(
+  (s) => s.status === "active" || s.status === true
+).length;
+
+const draftCount = subcategories.filter(
+  (s) => s.status === "draft" || s.status === false
+).length;
+
+const totalProducts = subcategories.reduce(
+  (sum, s) => sum + (Number(s.productCount) || 0),
+  0
+);
 
   // Filtered & Ranked Data
   React.useEffect(() => {
@@ -442,10 +482,39 @@ const [newTagline, setNewTagline] = useState("");
 
   const handleDeleteSubcategory = (id) => {
     updateCurrentSubcategories((list) => list.filter((item) => item.id !== id));
-    if (inspectorItem?.id === id) {
+    if (inspectorsubCategory?.id === id) {
       setInspectorItem(null);
     }
   };
+
+  const imageInputRef = useRef(null);
+
+const handleSubcategoryImageChange = (e) => {
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  if (!file.type.startsWith("image/")) {
+    alert("Please select a valid image file.");
+    e.target.value = "";
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert("Image size cannot exceed 5MB.");
+    e.target.value = "";
+    return;
+  }
+
+  const previewUrl = URL.createObjectURL(file);
+
+  setInspectorSubCategory((prev) => ({
+    ...prev,
+    imageFile: file,
+    image : file,
+    inspectorPreviewUrl: previewUrl,
+  }));
+};
 
   // Material React Table Columns
   const columns = useMemo(
@@ -476,7 +545,7 @@ const [newTagline, setNewTagline] = useState("");
               <Box sx={{ position: "relative", flexShrink: 0 }}>
                 <Avatar
                   variant="rounded"
-                  src={`http://localhost:5000/api/ecommerce${item.image}`}
+                  src={`http://localhost:5000/api/ecommerce/${item.image}`}
                   alt={"cannot render"}
                   sx={{
                     width: 46,
@@ -593,7 +662,7 @@ const [newTagline, setNewTagline] = useState("");
         muiTableHeadCellProps: { align: "right" },
         muiTableBodyCellProps: { align: "right" },
         Cell: ({ row }) => {
-          const isEditing = inspectorItem?.id === row.original.id;
+          const isEditing = inspectorsubCategory?.id === row.original.id;
           return (
             <Stack
               direction="row"
@@ -633,7 +702,7 @@ const [newTagline, setNewTagline] = useState("");
         },
       },
     ],
-    [inspectorItem, currentCategory.id]
+    [inspectorsubCategory, currentCategory?.id]
   );
 
   // Material React Table Instance
@@ -684,9 +753,9 @@ const [newTagline, setNewTagline] = useState("");
       },
     },
     muiTableBodyRowProps: ({ row }) => {
-      const isSelected = inspectorItem?.id === row.original.id;
+      const isSelected = inspectorsubCategory?.id === row.original.id;
       return {
-        onClick: () => setInspectorItem(row.original),
+        onClick: () => setInspectorSubCategory(row.original),
         sx: {
           cursor: "pointer",
           backgroundColor: isSelected ? "#f9fafb" : "#fff",
@@ -707,55 +776,23 @@ const [newTagline, setNewTagline] = useState("");
 
   // Inspector Save & Discard Handlers
   const handleSaveInspector = () => {
-    if (!inspectorItem) return;
+    if (!inspectorsubCategory) return;
+    dispatch(actions.updatesubCategory(pagination,inspectorsubCategory.id, inspectorsubCategory));
     updateCurrentSubcategories((list) =>
       list.map((item) =>
-        item.id === inspectorItem.id ? inspectorItem : item
+        item.id === inspectorsubCategory.id ? inspectorsubCategory : item
       )
     );
   };
 
   const handleDiscardInspector = () => {
-    if (!inspectorItem) return;
-    const original = subcategories.find((s) => s.id === inspectorItem.id);
+    if (!inspectorsubCategory) return;
+    const original = subcategories.find((s) => s.id === inspectorsubCategory.id);
     if (original) setInspectorItem(original);
   };
 
   // Add New Subcategory Handler
-  const handleAddSubcategory = () => {
-    if (!newName.trim()) return;
-    const slugSegment = newName
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-");
 
-    const newItem = {
-      id: Date.now(),
-      rank: subcategories.length + 1,
-      name: newName.trim(),
-      slug: `/${currentCategory.slug}/${slugSegment}`,
-      skuCode:
-        newSku.trim().toUpperCase() ||
-        `${currentCategory.skuPrefix}${slugSegment.slice(0, 3).toUpperCase()}`,
-      itemsCount: 0,
-      status: true,
-      isFeatured: false,
-      thumbnailUrl:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
-      inspectorPreviewUrl:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&w=400&q=80",
-      tagline: newTagline.trim() || "New seasonal studio addition.",
-      seoTitle: `${newName.trim()} | Atelier Studio`,
-      seoDescription: newTagline.trim(),
-    };
-
-    updateCurrentSubcategories((list) => [...list, newItem]);
-    setInspectorItem(newItem);
-    setNewName("");
-    setNewSku("");
-    setNewTagline("");
-    setAddOpen(false);
-  };
 
   return (
     <Box
@@ -780,13 +817,13 @@ const [newTagline, setNewTagline] = useState("");
         <Link
           underline="hover"
           color="inherit"
-          onClick={() => navigate("/categories")}
+          onClick={() => navigate("/category")}
           sx={{ cursor: "pointer" }}
         >
           Categories
         </Link>
         <Typography fontSize={12} fontWeight={600} color="#111827">
-          {currentCategory.title}
+          {currentCategory?.categoryName}
         </Typography>
         <Typography fontSize={12} fontWeight={600} color="#c2410c">
           Subcategories
@@ -840,7 +877,7 @@ const [newTagline, setNewTagline] = useState("");
                 variant="h4"
                 sx={{ fontWeight: 700, color: "#111827", letterSpacing: -0.5 }}
               >
-                Subcategories: {currentCategory.title}
+                Subcategories: {currentCategory?.categoryName}
               </Typography>
               <IconButton
                 size="small"
@@ -897,7 +934,7 @@ const [newTagline, setNewTagline] = useState("");
                 SWITCH ROOT CATEGORY ({allCategories.length})
               </Typography>
 
-              {allCategories.map((cat) => {
+              {categoryList && categoryList.length > 0 && categoryList.map((cat) => {
                 const isSelected = cat.id === currentCategory.id;
                 return (
                   <MenuItem
@@ -929,10 +966,10 @@ const [newTagline, setNewTagline] = useState("");
                             fontWeight={isSelected ? 700 : 600}
                             color="#111827"
                           >
-                            {cat.title}
+                            {cat.categoryName}
                           </Typography>
                           <Chip
-                            label={`#${cat.deptCode}`}
+                            label={`#${cat.id}`}
                             size="small"
                             sx={{
                               height: 17,
@@ -944,12 +981,12 @@ const [newTagline, setNewTagline] = useState("");
                           />
                         </Box>
                       }
-                      secondary={
-                        <Typography variant="caption" color="text.secondary">
-                          {cat.subcategories.length} subcategories •{" "}
-                          {cat.skuPrefix}
-                        </Typography>
-                      }
+                      // secondary={
+                      //   <Typography variant="caption" color="text.secondary">
+                      //     {cat.subcategories.length} subcategories •{" "}
+                      //     {cat.skuPrefix}
+                      //   </Typography>
+                      // }
                     />
                     {isSelected && (
                       <Check sx={{ fontSize: 16, color: "#111827", ml: 1 }} />
@@ -1043,10 +1080,10 @@ const [newTagline, setNewTagline] = useState("");
           <Box>
             <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.3 }}>
               <Typography variant="subtitle1" fontWeight={700} color="#111827">
-                Root Category: {currentCategory.title}
+                Root Category: {currentCategory?.categoryName}
               </Typography>
               <Chip
-                label={`CATALOG DEPT #${currentCategory.deptCode}`}
+                label={`CATALOG DEPT #${currentCategory?.deptCode}`}
                 size="small"
                 sx={{
                   height: 20,
@@ -1058,7 +1095,7 @@ const [newTagline, setNewTagline] = useState("");
               />
             </Box>
             <Typography variant="caption" color="text.secondary">
-              {currentCategory.departmentsLabel}
+              {/* {currentCategory.departmentsLabel} */}
             </Typography>
           </Box>
 
@@ -1113,7 +1150,7 @@ const [newTagline, setNewTagline] = useState("");
                 SKU Prefix:
                 <br />
                 <Box component="strong" color="#374151">
-                  {currentCategory.skuPrefix}
+                  {/* {currentCategory.skuPrefix} */}
                 </Box>
               </Typography>
             </Box>
@@ -1320,510 +1357,451 @@ const [newTagline, setNewTagline] = useState("");
         </Box>
 
         {/* Right Column: Subcategory Inspector Panel */}
-        {inspectorItem && (
-          <Paper
-            elevation={0}
+       
+{inspectorsubCategory && (
+  <Paper
+    elevation={0}
+    sx={{
+      width: { xs: "100%", lg: 365 },
+      flexShrink: 0,
+      p: 3,
+      borderRadius: 4,
+      border: "1px solid #f0f0f0",
+      backgroundColor: "#fff",
+      position: { lg: "sticky" },
+      top: 24,
+    }}
+  >
+    {/* Inspector Header */}
+    <Box
+      sx={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        mb: 2,
+      }}
+    >
+      <Box>
+        <Stack direction="row" spacing={1} alignItems="center" mb={0.8}>
+          <Chip
+            label="INSPECTOR"
+            size="small"
             sx={{
-              width: { xs: "100%", lg: 365 },
-              flexShrink: 0,
-              p: 3,
-              borderRadius: 4,
-              border: "1px solid #f0f0f0",
-              backgroundColor: "#fff",
-              position: { lg: "sticky" },
-              top: 24,
+              height: 18,
+              fontSize: 9.5,
+              fontWeight: 700,
+              bgcolor: "#0a0a0a",
+              color: "#fff",
+            }}
+          />
+          <Typography
+            variant="caption"
+            sx={{
+              fontWeight: 700,
+              color: "#6b7280",
+              letterSpacing: 0.6,
+              fontSize: 10,
             }}
           >
-            {/* Inspector Header */}
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                mb: 2,
-              }}
-            >
-              <Box>
-                <Stack direction="row" spacing={1} alignItems="center" mb={0.8}>
-                  <Chip
-                    label="INSPECTOR"
-                    size="small"
-                    sx={{
-                      height: 18,
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      bgcolor: "#0a0a0a",
-                      color: "#fff",
-                    }}
-                  />
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontWeight: 700,
-                      color: "#6b7280",
-                      letterSpacing: 0.6,
-                      fontSize: 10,
-                    }}
-                  >
-                    CATEGORY CONTEXT
-                  </Typography>
-                </Stack>
-                <Typography
-                  variant="h6"
-                  fontWeight={700}
-                  color="#111827"
-                  lineHeight={1.2}
-                >
-                  Edit Subcategory:
-                  <br />
-                  {inspectorItem.name}
-                </Typography>
-              </Box>
-              <IconButton size="small" onClick={() => setInspectorItem(null)}>
-                <Close fontSize="small" />
-              </IconButton>
-            </Box>
+            SUBCATEGORY CONTEXT
+          </Typography>
+        </Stack>
 
-            {/* Locked Parent Category Box */}
-            <Box
-              sx={{
-                p: 1.5,
-                mb: 2.5,
-                borderRadius: 2.5,
-                backgroundColor: "#f3f4f6",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <Box>
-                <Typography
-                  variant="caption"
-                  sx={{
-                    fontSize: 9.5,
-                    fontWeight: 700,
-                    color: "#6b7280",
-                    display: "block",
-                    mb: 0.3,
-                  }}
-                >
-                  LOCKED PARENT CATEGORY
-                </Typography>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 0.6 }}>
-                  <LockOutlined sx={{ fontSize: 14, color: "#374151" }} />
-                  <Typography variant="caption" fontWeight={700} color="#111827">
-                    {currentCategory.title} (Current Master)
-                  </Typography>
-                </Box>
-              </Box>
-              <Chip
-                label={`Dept ${currentCategory.deptCode}`}
-                size="small"
-                sx={{
-                  height: 22,
-                  fontSize: 11,
-                  fontWeight: 600,
-                  bgcolor: "#e5e7eb",
-                  color: "#374151",
-                }}
-              />
-            </Box>
+        <Typography
+          variant="h6"
+          fontWeight={700}
+          color="#111827"
+          lineHeight={1.2}
+        >
+          Edit Subcategory:
+          <br />
+          {inspectorsubCategory.subcategoryName}
+        </Typography>
+      </Box>
 
-            {/* Subcategory Name + Display Order / Rank */}
-            <Stack direction="row" spacing={1.5} sx={{ mb: 2.2 }}>
-              <Box sx={{ flex: 1.4 }}>
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  color="#4b5563"
-                  display="block"
-                  fontSize={10}
-                  mb={0.6}
-                >
-                  SUBCATEGORY NAME
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  value={inspectorItem.name}
-                  onChange={(e) =>
-                    setInspectorItem({ ...inspectorItem, name: e.target.value })
-                  }
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                      backgroundColor: "#f3f4f6",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      "& fieldset": { border: "none" },
-                    },
-                  }}
-                />
-              </Box>
+      <IconButton size="small" onClick={() => setInspectorItem(null)}>
+        <Close fontSize="small" />
+      </IconButton>
+    </Box>
 
-              <Box sx={{ flex: 1 }}>
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  color="#4b5563"
-                  display="block"
-                  fontSize={10}
-                  mb={0.6}
-                >
-                  DISPLAY ORDER / RANK
-                </Typography>
-                <TextField
-                  fullWidth
-                  size="small"
-                  type="number"
-                  value={inspectorItem.rank}
-                  onChange={(e) =>
-                    setInspectorItem({
-                      ...inspectorItem,
-                      rank: Number(e.target.value) || 1,
-                    })
-                  }
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      borderRadius: 2,
-                      backgroundColor: "#f3f4f6",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      "& fieldset": { border: "none" },
-                    },
-                  }}
-                />
-              </Box>
-            </Stack>
+    {/* Parent Category Dropdown */}
+    <Box sx={{ mb: 2.5 }}>
+      <Typography
+        variant="caption"
+        sx={{
+          fontSize: 9.5,
+          fontWeight: 700,
+          color: "#6b7280",
+          display: "block",
+          mb: 0.8,
+        }}
+      >
+        PARENT CATEGORY
+      </Typography>
 
-            {/* Storefront URL Slug */}
-            <Box sx={{ mb: 2.2 }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="#4b5563"
-                display="block"
-                fontSize={10}
-                mb={0.6}
-              >
-                STOREFRONT URL SLUG
+      <FormControl fullWidth size="small">
+        <Select
+          value={
+            inspectorsubCategory.categoryId ??
+            inspectorsubCategory.category?.id ??
+            currentCategory?.id ??
+            ""
+          }
+          displayEmpty
+          onChange={(e) =>
+            setInspectorSubCategory((prev) => ({
+              ...prev,
+              categoryId: e.target.value,
+            }))
+          }
+          sx={{
+            borderRadius: 2,
+            backgroundColor: "#f3f4f6",
+            fontSize: 13,
+            fontWeight: 600,
+            "& fieldset": { border: "none" },
+          }}
+        >
+          <MenuItem value="" disabled>
+            Select Parent Category
+          </MenuItem>
+
+          {Array.isArray(categoryList) &&
+            categoryList.map((category) => (
+              <MenuItem key={category.id} value={category.id}>
+                {category.categoryName}
+              </MenuItem>
+            ))}
+        </Select>
+      </FormControl>
+    </Box>
+
+    {/* Subcategory Name */}
+    <Box sx={{ mb: 2.2 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#4b5563"
+        display="block"
+        fontSize={10}
+        mb={0.6}
+      >
+        SUBCATEGORY NAME
+      </Typography>
+
+      <TextField
+        fullWidth
+        size="small"
+        value={inspectorsubCategory.subcategoryName || ""}
+        onChange={(e) =>
+          setInspectorSubCategory((prev) => ({
+            ...prev,
+            subcategoryName: e.target.value,
+          }))
+        }
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 2,
+            backgroundColor: "#f3f4f6",
+            fontSize: 13,
+            fontWeight: 600,
+            "& fieldset": { border: "none" },
+          },
+        }}
+      />
+    </Box>
+
+    {/* Storefront URL Slug */}
+    <Box sx={{ mb: 2.2 }}>
+      <Typography
+        variant="caption"
+        fontWeight={700}
+        color="#4b5563"
+        display="block"
+        fontSize={10}
+        mb={0.6}
+      >
+        STOREFRONT URL SLUG
+      </Typography>
+
+      <TextField
+        fullWidth
+        size="small"
+        value={inspectorsubCategory.slug || ""}
+        onChange={(e) =>
+          setInspectorSubCategory((prev) => ({
+            ...prev,
+            slug: e.target.value,
+          }))
+        }
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Typography variant="caption" color="text.secondary">
+                atelier.studio
               </Typography>
-              <TextField
-                fullWidth
-                size="small"
-                value={inspectorItem.slug}
-                onChange={(e) =>
-                  setInspectorItem({ ...inspectorItem, slug: e.target.value })
-                }
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <Typography variant="caption" color="text.secondary">
-                        atelier.studio
-                      </Typography>
-                    </InputAdornment>
-                  ),
-                }}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    backgroundColor: "#f3f4f6",
-                    fontSize: 12.5,
-                    fontWeight: 600,
-                    "& fieldset": { border: "none" },
-                  },
-                }}
-              />
-            </Box>
+            </InputAdornment>
+          ),
+        }}
+        sx={{
+          "& .MuiOutlinedInput-root": {
+            borderRadius: 2,
+            backgroundColor: "#f3f4f6",
+            fontSize: 12.5,
+            fontWeight: 600,
+            "& fieldset": { border: "none" },
+          },
+        }}
+      />
+    </Box>
 
-            {/* Description & Editorial Tagline */}
-            <Box sx={{ mb: 2.2 }}>
-              <Typography
-                variant="caption"
-                fontWeight={700}
-                color="#4b5563"
-                display="block"
-                fontSize={10}
-                mb={0.6}
-              >
-                DESCRIPTION & EDITORIAL TAGLINE
-              </Typography>
-              <TextField
-                fullWidth
-                multiline
-                rows={2}
-                size="small"
-                value={inspectorItem.tagline}
-                onChange={(e) =>
-                  setInspectorItem({
-                    ...inspectorItem,
-                    tagline: e.target.value,
-                  })
-                }
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    backgroundColor: "#f3f4f6",
-                    fontSize: 12.5,
-                    "& fieldset": { border: "none" },
-                  },
-                }}
-              />
-            </Box>
+    {/* Subcategory Image Upload */}
+    <Box sx={{ mb: 2.5 }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          mb: 0.8,
+        }}
+      >
+        <Typography
+          variant="caption"
+          fontWeight={700}
+          color="#4b5563"
+          fontSize={10}
+        >
+          SUBCATEGORY IMAGE
+        </Typography>
 
-            {/* Subcategory Visual Thumbnail */}
-            <Box sx={{ mb: 2 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.8,
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  color="#4b5563"
-                  fontSize={10}
-                >
-                  SUBCATEGORY VISUAL THUMBNAIL
-                </Typography>
-                <Typography variant="caption" color="text.secondary" fontSize={10}>
-                  800×800 • Max 5MB
-                </Typography>
-              </Box>
+        <Typography variant="caption" color="text.secondary" fontSize={10}>
+          Max 5MB
+        </Typography>
+      </Box>
 
-              <Box
-                sx={{
-                  p: 1.5,
-                  borderRadius: 2.5,
-                  backgroundColor: "#f3f4f6",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                }}
-              >
-                <Avatar
-                  variant="rounded"
-                  src={inspectorItem.inspectorPreviewUrl}
-                  sx={{ width: 68, height: 68, borderRadius: 2 }}
-                />
-                <Box>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 0.5,
-                      mb: 0.3,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <CloudUploadOutlined
-                      sx={{ fontSize: 15, color: "#c2410c" }}
-                    />
-                    <Typography variant="caption" fontWeight={700} color="#111827">
-                      Replace Thumbnail
-                    </Typography>
-                  </Box>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    display="block"
-                    fontSize={11}
-                    lineHeight={1.3}
-                    mb={0.6}
-                  >
-                    Drag image here or browse local studio assets
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    sx={{
-                      fontSize: 9.5,
-                      fontWeight: 700,
-                      color: "#374151",
-                      letterSpacing: 0.4,
-                    }}
-                  >
-                    1 IMAGE UPLOADED (ACTIVE)
-                  </Typography>
-                </Box>
-              </Box>
-            </Box>
+      <input
+        type="file"
+        accept="image/*"
+        hidden
+        ref={imageInputRef}
+        onChange={handleSubcategoryImageChange}
+      />
 
-            {/* SEO & Store Meta Tags Accordion */}
-            <Accordion
-              elevation={0}
-              disableGutters
-              sx={{
-                mb: 2.5,
-                borderRadius: "10px !important",
-                backgroundColor: "#f3f4f6",
-                "&:before": { display: "none" },
-              }}
+      <Box
+        sx={{
+          p: 1.5,
+          borderRadius: 2.5,
+          backgroundColor: "#f3f4f6",
+          display: "flex",
+          alignItems: "center",
+          gap: 1.5,
+        }}
+      >
+        <Avatar
+          variant="rounded"
+          src={
+            inspectorsubCategory.inspectorPreviewUrl ||
+           `http://localhost:5000/api/ecommerce/${inspectorsubCategory.image}` ||
+            ""
+          }
+          sx={{
+            width: 75,
+            height: 75,
+            borderRadius: 2,
+            bgcolor: "#e5e7eb",
+          }}
+        />
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Box
+            onClick={() => imageInputRef.current?.click()}
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.5,
+              mb: 0.5,
+              cursor: "pointer",
+              width: "fit-content",
+            }}
+          >
+            <CloudUploadOutlined
+              sx={{ fontSize: 17, color: "#c2410c" }}
+            />
+
+            <Typography
+              variant="caption"
+              fontWeight={700}
+              color="#111827"
             >
-              <AccordionSummary expandIcon={<ExpandMore fontSize="small" />}>
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                  <Search sx={{ fontSize: 16, color: "#4b5563" }} />
-                  <Typography variant="caption" fontWeight={700} color="#111827">
-                    SEO & Store Meta Tags
-                  </Typography>
-                </Box>
-              </AccordionSummary>
-              <AccordionDetails sx={{ pt: 0 }}>
-                <Stack spacing={1.2}>
-                  <TextField
-                    size="small"
-                    label="Meta Title"
-                    fullWidth
-                    value={inspectorItem.seoTitle}
-                    onChange={(e) =>
-                      setInspectorItem({
-                        ...inspectorItem,
-                        seoTitle: e.target.value,
-                      })
-                    }
-                    sx={{ bgcolor: "#fff", borderRadius: 1 }}
-                  />
-                  <TextField
-                    size="small"
-                    label="Meta Description"
-                    fullWidth
-                    multiline
-                    rows={2}
-                    value={inspectorItem.seoDescription}
-                    onChange={(e) =>
-                      setInspectorItem({
-                        ...inspectorItem,
-                        seoDescription: e.target.value,
-                      })
-                    }
-                    sx={{ bgcolor: "#fff", borderRadius: 1 }}
-                  />
-                </Stack>
-              </AccordionDetails>
-            </Accordion>
+              Replace Image
+            </Typography>
+          </Box>
 
-            {/* Discard & Save Buttons */}
-            <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
-              <Button
-                fullWidth
-                onClick={handleDiscardInspector}
-                sx={{
-                  borderRadius: 99,
-                  textTransform: "none",
-                  backgroundColor: "#f3f4f6",
-                  color: "#111827",
-                  fontWeight: 600,
-                  py: 1.1,
-                  "&:hover": { backgroundColor: "#e5e7eb" },
-                }}
-              >
-                Discard
-              </Button>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={handleSaveInspector}
-                sx={{
-                  borderRadius: 99,
-                  textTransform: "none",
-                  backgroundColor: "#0a0a0a",
-                  color: "#fff",
-                  fontWeight: 600,
-                  py: 1.1,
-                  boxShadow: "none",
-                  "&:hover": { backgroundColor: "#262626", boxShadow: "none" },
-                }}
-              >
-                Save Changes
-              </Button>
-            </Stack>
+          <Typography
+            variant="caption"
+            color="text.secondary"
+            display="block"
+            fontSize={11}
+            lineHeight={1.4}
+            mb={0.8}
+          >
+            Click to browse and upload a new subcategory image.
+          </Typography>
 
-            {/* Return Link */}
-            <Box sx={{ textAlign: "center" }}>
-              <Link
-                component="button"
-                underline="hover"
-                onClick={() => navigate("/categories")}
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 500,
-                  color: "#6b7280",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 0.5,
-                }}
-              >
-                <ArrowBack sx={{ fontSize: 14 }} />
-                Return to Categories Overview
-              </Link>
-            </Box>
-          </Paper>
-        )}
+          <Button
+            size="small"
+            variant="outlined"
+            onClick={() => imageInputRef.current?.click()}
+            sx={{
+              textTransform: "none",
+              fontSize: 11,
+              borderRadius: 2,
+              borderColor: "#d1d5db",
+              color: "#374151",
+            }}
+          >
+            Choose Image
+          </Button>
+        </Box>
+      </Box>
+
+      {inspectorsubCategory.imageFile && (
+        <Typography
+          variant="caption"
+          color="success.main"
+          display="block"
+          mt={1}
+        >
+          Selected: {inspectorsubCategory.imageFile.name}
+        </Typography>
+      )}
+    </Box>
+
+    {/* SEO & Store Meta Tags */}
+    <Accordion
+      elevation={0}
+      disableGutters
+      sx={{
+        mb: 2.5,
+        borderRadius: "10px !important",
+        backgroundColor: "#f3f4f6",
+        "&:before": { display: "none" },
+      }}
+    >
+      <AccordionSummary expandIcon={<ExpandMore fontSize="small" />}>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Search sx={{ fontSize: 16, color: "#4b5563" }} />
+          <Typography variant="caption" fontWeight={700} color="#111827">
+            SEO & Store Meta Tags
+          </Typography>
+        </Box>
+      </AccordionSummary>
+
+      <AccordionDetails sx={{ pt: 0 }}>
+        <Stack spacing={1.2}>
+          <TextField
+            size="small"
+            label="Meta Title"
+            fullWidth
+            value={inspectorsubCategory.seoTitle || ""}
+            onChange={(e) =>
+              setInspectorItem((prev) => ({
+                ...prev,
+                seoTitle: e.target.value,
+              }))
+            }
+            sx={{ bgcolor: "#fff", borderRadius: 1 }}
+          />
+
+          <TextField
+            size="small"
+            label="Meta Description"
+            fullWidth
+            multiline
+            rows={2}
+            value={inspectorsubCategory.seoDescription || ""}
+            onChange={(e) =>
+              setInspectorItem((prev) => ({
+                ...prev,
+                seoDescription: e.target.value,
+              }))
+            }
+            sx={{ bgcolor: "#fff", borderRadius: 1 }}
+          />
+        </Stack>
+      </AccordionDetails>
+    </Accordion>
+
+    {/* Discard & Save */}
+    <Stack direction="row" spacing={1.5} sx={{ mb: 2 }}>
+      <Button
+        fullWidth
+        onClick={handleDiscardInspector}
+        sx={{
+          borderRadius: 99,
+          textTransform: "none",
+          backgroundColor: "#f3f4f6",
+          color: "#111827",
+          fontWeight: 600,
+          py: 1.1,
+          "&:hover": { backgroundColor: "#e5e7eb" },
+        }}
+      >
+        Discard
+      </Button>
+
+      <Button
+        fullWidth
+        variant="contained"
+        onClick={handleSaveInspector}
+        sx={{
+          borderRadius: 99,
+          textTransform: "none",
+          backgroundColor: "#0a0a0a",
+          color: "#fff",
+          fontWeight: 600,
+          py: 1.1,
+          boxShadow: "none",
+          "&:hover": {
+            backgroundColor: "#262626",
+            boxShadow: "none",
+          },
+        }}
+      >
+        Save Changes
+      </Button>
+    </Stack>
+
+    {/* Return Link */}
+    <Box sx={{ textAlign: "center" }}>
+      <Link
+        component="button"
+        underline="hover"
+        onClick={() => navigate("/categories")}
+        sx={{
+          fontSize: 12,
+          fontWeight: 500,
+          color: "#6b7280",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 0.5,
+        }}
+      >
+        <ArrowBack sx={{ fontSize: 14 }} />
+        Return to Categories Overview
+      </Link>
+    </Box>
+  </Paper>
+)}
+
       </Box>
 
       {/* Add New Subcategory Dialog */}
-      <Dialog
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>
-          Add New Subcategory ({currentCategory.title})
-        </DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Subcategory Name"
-              fullWidth
-              size="small"
-              placeholder="e.g. Long Sleeve"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-            />
-            <TextField
-              label="SKU Code (optional)"
-              fullWidth
-              size="small"
-              placeholder={`e.g. ${currentCategory.skuPrefix}LNG`}
-              value={newSku}
-              onChange={(e) => setNewSku(e.target.value)}
-            />
-            <TextField
-              label="Editorial Tagline"
-              fullWidth
-              size="small"
-              multiline
-              rows={2}
-              value={newTagline}
-              onChange={(e) => setNewTagline(e.target.value)}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setAddOpen(false)}
-            sx={{ textTransform: "none", color: "#6b7280" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleAddSubcategory}
-            sx={{
-              borderRadius: 99,
-              textTransform: "none",
-              backgroundColor: "#0a0a0a",
-              "&:hover": { backgroundColor: "#262626" },
-            }}
-          >
-            Add Subcategory
-          </Button>
-        </DialogActions>
-      </Dialog>
+        <CreateSubCategory
+        addOpen={addOpen}
+        setAddOpen={setAddOpen}
+        currentCategory={currentCategory}
+        />
     </Box>
   );
 }

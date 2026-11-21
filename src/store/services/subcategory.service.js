@@ -34,13 +34,13 @@ export const fetchsubCategoryService = (pageIndex,pageSize,search) => {
   });
 };
 
-// export const createCategoryService = async (payload) => {
+export const createSubCategoryService = async (payload) => {
 //   const formData = new FormData();
 
-//   formData.append("categoryName", payload.name);
+//   formData.append("category_id", payload.category_id);
 //   formData.append("slug", payload.slug);
-//   formData.append("departmentId", payload.department_id);
-//   formData.append("description", payload.description || "");
+//   formData.append("subcategory_name", payload.subcategory_name);
+// //   formData.append("description", payload.description || "");
 //   formData.append("status", payload.status); // e.g., "ACTIVE" / "DRAFT" or boolean
 
 //   // Only append image if a File was actually selected
@@ -48,35 +48,55 @@ export const fetchsubCategoryService = (pageIndex,pageSize,search) => {
 //     formData.append("image", payload.image); // Must match your backend multer field name (e.g. upload.single("image"))
 //   }
 
-//   const response = await axiosInstance.post("categories/", formData, {
-//     headers: {
-//       "Content-Type": "multipart/form-data",
-//     },
-//   });
+  const response = await axiosInstance.post("sub-categories/", payload, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
-//   return response?.data;
-// };
-// export const updateCategoryService = async (id , payload) => {
-//   const formData = new FormData();
+  return response?.data;
+};
+export const fetchSubCategoryBycategoryId = (categoryId) => {
+  return new Promise(async (resolve, reject) => {
+    try {
+      let response;
+        response = await axiosInstance.get(
+        `sub-categories/category/${categoryId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }, // request body (empty)
+      );
 
-//   formData.append("categoryName", payload.categoryName);
-//   formData.append("slug", payload.slug);
-//   formData.append("departmentId", payload.department.id);
+      resolve(response?.data);
+    } catch (err) {
+      reject(err);
+    }
+  });
+};
+// fetchSubCategoryBycategoryId
+export const updateSubCategoryService = async (id , payload) => {
+  const formData = new FormData();
+
+  formData.append("subcategoryName", payload.subcategoryName);
+  formData.append("slug", payload.slug);
+  formData.append("categoryId", payload.categoryId);
 //   formData.append("description", payload.description || "");
-//   formData.append("status", payload.status === true ? "active" : "draft" ); // e.g., "ACTIVE" / "DRAFT" or boolean
+  formData.append("status", payload.status === true ? "active" : "draft" ); // e.g., "ACTIVE" / "DRAFT" or boolean
 
-//   // Only append image if a File was actually selected
-//   if (payload.image instanceof File) {
-//     formData.append("image", payload.image); // Must match your backend multer field name (e.g. upload.single("image"))
-//   }
+  // Only append image if a File was actually selected
+  if (payload.image instanceof File) {
+    formData.append("image", payload.image); // Must match your backend multer field name (e.g. upload.single("image"))
+  }
 
-//   const response = await axiosInstance.put(`categories/${id}`, formData, {
-//     headers: {
-//       "Content-Type": "multipart/form-data",
-//     },
-//   });
+  const response = await axiosInstance.put(`sub-categories/${id}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
 
-//   return response?.data;
-// };
+  return response?.data;
+};
 // updateCategoryService
 // createCategoryService

@@ -160,6 +160,7 @@ export default function ProductsCatalog() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusTab, setStatusTab] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
+  const [subcategoryFilter, setSubcategoryFilter] = useState("ALL");
   const [deptFilter, setDeptFilter] = useState("ALL");
   const [stockFilter, setStockFilter] = useState("ANY");
   const [priceFilter, setPriceFilter] = useState("ALL");
@@ -457,6 +458,22 @@ export default function ProductsCatalog() {
     ],
     []
   );
+
+  const subcategoryOptions = useMemo(
+  () => [
+    ...new Set(
+      products
+        .filter(
+          (p) =>
+            categoryFilter === "ALL" ||
+            p.category === categoryFilter
+        )
+        .map((p) => p.subcategory)
+        .filter(Boolean)
+    ),
+  ],
+  [products, categoryFilter]
+);
 
   // Material React Table Instance
   const table = useMaterialReactTable({
@@ -1127,6 +1144,29 @@ export default function ProductsCatalog() {
                   <MenuItem value="PANTS">Category: Pants</MenuItem>
                   <MenuItem value="OUTERWEAR">Category: Outerwear</MenuItem>
                 </Select>
+
+                 <Select
+                    size="small"
+                    value={subcategoryFilter}
+                    onChange={(e) => setSubcategoryFilter(e.target.value)}
+                    sx={{
+                      borderRadius: 99,
+                      backgroundColor: "#f3f4f6",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      height: 32,
+                      minWidth: 175,
+                      "& fieldset": { border: "none" },
+                    }}
+                  >
+                    <MenuItem value="ALL">Subcategory: All</MenuItem>
+
+                    {subcategoryOptions.map((subcategory) => (
+                      <MenuItem key={subcategory} value={subcategory}>
+                        {subcategory}
+                      </MenuItem>
+                    ))}
+                  </Select>
 
                 <Select
                   size="small"
