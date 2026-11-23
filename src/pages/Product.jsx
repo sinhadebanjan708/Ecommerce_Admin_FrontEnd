@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import {
   MaterialReactTable,
   useMaterialReactTable,
@@ -19,10 +19,7 @@ import {
   Stack,
   LinearProgress,
   Menu,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
+
   Divider,
 } from "@mui/material";
 import {
@@ -48,6 +45,9 @@ import {
   KeyboardArrowRight,
   KeyboardArrowDown,
 } from "@mui/icons-material";
+import { useSelector,useDispatch } from "react-redux";
+import * as actions from "../store/actions"
+import CreateProductDialogue from "./CreateProductDialogue";
 
 const INITIAL_PRODUCTS = [
   {
@@ -156,6 +156,12 @@ const STATUS_TABS = [
 ];
 
 export default function ProductsCatalog() {
+  const dispatch=useDispatch();
+  const productList= useSelector((state)=>state.product.productList)
+  const categoryList = useSelector(
+        (state) => state.category.categoryList
+      );
+  const subcategoryList = useSelector((state)=> state.subcategory.subcategoryList)
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusTab, setStatusTab] = useState("ALL");
@@ -171,7 +177,7 @@ export default function ProductsCatalog() {
   const [bulkAnchor, setBulkAnchor] = useState(null);
 
   // Right Quick Edit Inspector State (defaults to first product like screenshot)
-  const [inspectorProduct, setInspectorProduct] = useState(INITIAL_PRODUCTS[0]);
+  const [inspectorProduct, setInspectorProduct] = useState(null);
   const [newTagInput, setNewTagInput] = useState("");
 
   // Create Product Modal State
@@ -179,6 +185,46 @@ export default function ProductsCatalog() {
   const [newProdTitle, setNewProdTitle] = useState("");
   const [newProdSku, setNewProdSku] = useState("");
   const [newProdPrice, setNewProdPrice] = useState("65.00");
+const [pagination, setPagination] = useState({
+  pageIndex: 0,
+  pageSize: 5,
+});
+const [primaryImageFile, setPrimaryImageFile] = useState(null);
+const [primaryImagePreview, setPrimaryImagePreview] = useState(null);
+
+const primaryImageInputRef = useRef(null);
+const [totalRecords, setTotalRecords] = useState(0);
+
+React.useEffect(()=>{
+  dispatch(actions.fetchAllCategoris())
+   dispatch(actions.fetchAllSubCategoris())
+},[dispatch])
+
+React.useEffect(() => {
+  setPrimaryImageFile(null);
+  setPrimaryImagePreview(null);
+
+  if (primaryImageInputRef.current) {
+    primaryImageInputRef.current.value = "";
+  }
+}, [inspectorProduct?.id]);
+
+React.useEffect(() => {
+  dispatch(
+    actions.fetchAllProducts(
+      pagination.pageIndex,
+      pagination.pageSize
+    )
+  );
+}, [dispatch, pagination.pageIndex, pagination.pageSize]);
+
+React.useEffect(()=>{
+  if(productList && productList.length > 0){
+    setInspectorProduct(productList[0])
+  }
+},[productList])
+
+console.log('product_list__',productList)
 
   // Filtered & Sorted Products
   const filteredProducts = useMemo(() => {
@@ -242,14 +288,14 @@ export default function ProductsCatalog() {
   const columns = useMemo(
     () => [
       {
-        accessorKey: "imageUrl",
+        accessorKey: "image",
         header: "PREVIEW",
         size: 68,
         enableSorting: false,
         Cell: ({ row }) => (
           <Avatar
             variant="rounded"
-            src={row.original.imageUrl}
+            src={`http://localhost:5000/api/ecommerce/${row.original.image}`}
             alt={row.original.title}
             sx={{
               width: 44,
@@ -261,7 +307,7 @@ export default function ProductsCatalog() {
         ),
       },
       {
-        accessorKey: "title",
+        accessorKey: "productName",
         header: "PRODUCT & SKU",
         size: 235,
         Cell: ({ row }) => {
@@ -269,9 +315,9 @@ export default function ProductsCatalog() {
           return (
             <Box>
               <Typography variant="body2" fontWeight={700} color="#111827">
-                {item.title}
+                {item.productName}
               </Typography>
-              <Typography
+              {/* <Typography
                 variant="caption"
                 sx={{
                   fontFamily: "monospace",
@@ -288,21 +334,21 @@ export default function ProductsCatalog() {
                 >
                   {item.department}
                 </Box>
-              </Typography>
+              </Typography> */}
             </Box>
           );
         },
       },
       {
-        accessorKey: "category",
-        header: "TAXONOMY",
+        accessorKey: "categoryName",
+        header: "CATEGORY",
         size: 115,
         Cell: ({ row }) => {
           const item = row.original;
           return (
             <Box>
               <Chip
-                label={item.category}
+                label={item.categoryName}
                 size="small"
                 sx={{
                   height: 18,
@@ -319,7 +365,7 @@ export default function ProductsCatalog() {
                 display="block"
                 fontSize={11}
               >
-                {item.subcategory}
+                {item.subcategoryName}
               </Typography>
             </Box>
           );
@@ -331,19 +377,19 @@ export default function ProductsCatalog() {
         size: 95,
         Cell: ({ row }) => (
           <Typography variant="body2" fontWeight={700} color="#111827">
-            ${row.original.basePrice.toFixed(2)}
+            ₹{row.original.basePrice}
           </Typography>
         ),
       },
       {
-        accessorKey: "variantsCount",
+        accessorKey: "variantCount",
         header: "VARIANTS",
         size: 85,
         muiTableHeadCellProps: { align: "center" },
         muiTableBodyCellProps: { align: "center" },
         Cell: ({ row }) => (
           <Chip
-            label={`${row.original.variantsCount} SKUs`}
+            label={`${row.original.variantCount} SKUs`}
             size="small"
             sx={{
               bgcolor: "#f3f4f6",
@@ -356,81 +402,81 @@ export default function ProductsCatalog() {
           />
         ),
       },
-      {
-        accessorKey: "stockUnits",
-        header: "STOCK LEVEL",
-        size: 135,
-        Cell: ({ row }) => {
-          const item = row.original;
-          const pct = Math.min(
-            100,
-            Math.round((item.stockUnits / item.maxStock) * 100)
-          );
-          const isAlert =
-            item.stockTone === "warning" || item.stockTone === "danger";
+      // {
+      //   accessorKey: "stockUnits",
+      //   header: "STOCK LEVEL",
+      //   size: 135,
+      //   Cell: ({ row }) => {
+      //     const item = row.original;
+      //     const pct = Math.min(
+      //       100,
+      //       Math.round((item.stockUnits / item.maxStock) * 100)
+      //     );
+      //     const isAlert =
+      //       item.stockTone === "warning" || item.stockTone === "danger";
 
-          return (
-            <Box sx={{ width: 115 }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 0.5,
-                }}
-              >
-                <Typography
-                  variant="caption"
-                  fontWeight={700}
-                  color={isAlert ? "#c2410c" : "#111827"}
-                  fontSize={11}
-                >
-                  {item.stockUnits} units
-                </Typography>
-                <Typography
-                  variant="caption"
-                  fontWeight={600}
-                  color={isAlert ? "#c2410c" : "text.secondary"}
-                  fontSize={10.5}
-                >
-                  {item.stockLabel}
-                </Typography>
-              </Box>
-              <LinearProgress
-                variant="determinate"
-                value={pct}
-                sx={{
-                  height: 4,
-                  borderRadius: 99,
-                  backgroundColor: "#e5e7eb",
-                  "& .MuiLinearProgress-bar": {
-                    backgroundColor: isAlert ? "#c2410c" : "#111827",
-                    borderRadius: 99,
-                  },
-                }}
-              />
-            </Box>
-          );
-        },
-      },
+      //     return (
+      //       <Box sx={{ width: 115 }}>
+      //         <Box
+      //           sx={{
+      //             display: "flex",
+      //             justifyContent: "space-between",
+      //             alignItems: "center",
+      //             mb: 0.5,
+      //           }}
+      //         >
+      //           <Typography
+      //             variant="caption"
+      //             fontWeight={700}
+      //             color={isAlert ? "#c2410c" : "#111827"}
+      //             fontSize={11}
+      //           >
+      //             {item.stockUnits} units
+      //           </Typography>
+      //           <Typography
+      //             variant="caption"
+      //             fontWeight={600}
+      //             color={isAlert ? "#c2410c" : "text.secondary"}
+      //             fontSize={10.5}
+      //           >
+      //             {item.stockLabel}
+      //           </Typography>
+      //         </Box>
+      //         <LinearProgress
+      //           variant="determinate"
+      //           value={pct}
+      //           sx={{
+      //             height: 4,
+      //             borderRadius: 99,
+      //             backgroundColor: "#e5e7eb",
+      //             "& .MuiLinearProgress-bar": {
+      //               backgroundColor: isAlert ? "#c2410c" : "#111827",
+      //               borderRadius: 99,
+      //             },
+      //           }}
+      //         />
+      //       </Box>
+      //     );
+      //   },
+      // },
       {
         accessorKey: "status",
         header: "STATUS",
         size: 100,
         Cell: ({ row }) => {
-          const isLimited = row.original.status === "LIMITED";
-          const isDraft = row.original.status === "DRAFT";
+          const isActive = row.original.status === "active";
+          const isDraft = row.original.status === "draft";
           return (
             <Chip
               icon={
                 <FiberManualRecord
                   sx={{
                     fontSize: "8px !important",
-                    color: isLimited
-                      ? "#dc2626 !important"
+                    color: isActive
+                      ? "#16a34a !important"
                       : isDraft
                       ? "#6b7280 !important"
-                      : "#16a34a !important",
+                      : "",
                   }}
                 />
               }
@@ -440,16 +486,16 @@ export default function ProductsCatalog() {
                 height: 22,
                 fontSize: 9.5,
                 fontWeight: 700,
-                bgcolor: isLimited
-                  ? "#fef2f2"
-                  : isDraft
-                  ? "#f3f4f6"
-                  : "#f0fdf4",
-                color: isLimited
-                  ? "#dc2626"
+                // bgcolor: isLimited
+                //   ? "#fef2f2"
+                //   : isDraft
+                //   ? "#f3f4f6"
+                //   : "#f0fdf4",
+                color: isActive
+                  ? "#15803d"
                   : isDraft
                   ? "#4b5563"
-                  : "#15803d",
+                  : "",
               }}
             />
           );
@@ -478,11 +524,23 @@ export default function ProductsCatalog() {
   // Material React Table Instance
   const table = useMaterialReactTable({
     columns,
-    data: filteredProducts,
+    data: productList || [],
     getRowId: (row) => String(row.id),
+    manualPagination: true,
+   rowCount: totalRecords,
+
+   enablePagination: true,
+
+   onPaginationChange: setPagination,
+
+  enableRowSelection: true,
+  onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
     onRowSelectionChange: setRowSelection,
-    state: { rowSelection },
+      state: {
+    rowSelection,
+    pagination,
+  },
     enableTopToolbar: false,
     enableColumnActions: false,
     enableColumnFilters: false,
@@ -530,88 +588,188 @@ export default function ProductsCatalog() {
         },
       };
     },
-    renderBottomToolbar: () => (
-      <Box
-        sx={{
-          px: 2.5,
-          py: 1.8,
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "space-between",
-          alignItems: "center",
-          gap: 1.5,
-          backgroundColor: "#fafafa",
-        }}
-      >
-        <Typography variant="caption" color="text.secondary">
-          Showing{" "}
-          <Box component="strong" color="#111827">
-            1 - {filteredProducts.length}
-          </Box>{" "}
-          of{" "}
-          <Box component="strong" color="#111827">
-            248 items
-          </Box>
-        </Typography>
+    renderBottomToolbar: ({ table }) => {
+  const { pageIndex, pageSize } = table.getState().pagination;
 
-        {/* Styled Pagination Pills matching screenshot */}
-        <Stack direction="row" spacing={0.8} alignItems="center">
-          <IconButton
-            size="small"
-            sx={{ border: "1px solid #e5e7eb", width: 28, height: 28 }}
-          >
-            <KeyboardArrowLeft sx={{ fontSize: 16 }} />
-          </IconButton>
+  const totalRows = totalRecords;
+  const pageCount = table.getPageCount();
 
-          {[1, 2, 3].map((page) => (
-            <Button
-              key={page}
-              size="small"
-              sx={{
-                minWidth: 28,
-                height: 28,
-                borderRadius: "50%",
-                fontSize: 12,
-                fontWeight: 700,
-                backgroundColor: page === 1 ? "#0a0a0a" : "transparent",
-                color: page === 1 ? "#fff" : "#4b5563",
-                "&:hover": {
-                  backgroundColor: page === 1 ? "#262626" : "#f3f4f6",
-                },
-              }}
-            >
-              {page}
-            </Button>
+  const startRow =
+    totalRows === 0 ? 0 : pageIndex * pageSize + 1;
+
+  const endRow = Math.min(
+    (pageIndex + 1) * pageSize,
+    totalRows
+  );
+
+
+
+  return (
+    <Box
+      sx={{
+        px: 2.5,
+        py: 1.8,
+        display: "flex",
+        flexWrap: "wrap",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: 1.5,
+        backgroundColor: "#fafafa",
+      }}
+    >
+      <Typography variant="caption" color="text.secondary">
+        Showing{" "}
+        <Box component="strong" color="#111827">
+          {startRow} - {endRow}
+        </Box>{" "}
+        of{" "}
+        <Box component="strong" color="#111827">
+          {totalRows}
+        </Box>{" "}
+        products
+      </Typography>
+
+      <Stack direction="row" spacing={0.8} alignItems="center">
+
+        <Select
+          size="small"
+          value={pageSize}
+          onChange={(e) =>
+            table.setPageSize(Number(e.target.value))
+          }
+          sx={{
+            height: 30,
+            fontSize: 12,
+            borderRadius: 2,
+            backgroundColor: "#fff",
+          }}
+        >
+          {[5, 10, 20, 50, 100].map((size) => (
+            <MenuItem key={size} value={size}>
+              {size} / page
+            </MenuItem>
           ))}
+        </Select>
 
-          <Typography variant="caption" color="text.secondary" sx={{ px: 0.5 }}>
-            ...
-          </Typography>
+        <IconButton
+          size="small"
+          disabled={!table.getCanPreviousPage()}
+          onClick={() => table.previousPage()}
+          sx={{
+            border: "1px solid #e5e7eb",
+            width: 28,
+            height: 28,
+          }}
+        >
+          <KeyboardArrowLeft sx={{ fontSize: 16 }} />
+        </IconButton>
 
-          <Button
-            size="small"
-            sx={{
-              minWidth: 28,
-              height: 28,
-              borderRadius: "50%",
-              fontSize: 12,
-              fontWeight: 600,
-              color: "#4b5563",
-            }}
-          >
-            62
-          </Button>
+        {Array.from(
+          { length: pageCount },
+          (_, index) => index
+        )
+          .filter((page) => {
+            return (
+              page === 0 ||
+              page === pageCount - 1 ||
+              Math.abs(page - pageIndex) <= 1
+            );
+          })
+          .reduce((result, page, index, pages) => {
+            if (index > 0 && page - pages[index - 1] > 1) {
+              result.push("...");
+            }
 
-          <IconButton
-            size="small"
-            sx={{ border: "1px solid #e5e7eb", width: 28, height: 28 }}
-          >
-            <KeyboardArrowRight sx={{ fontSize: 16 }} />
-          </IconButton>
-        </Stack>
-      </Box>
-    ),
+            result.push(page);
+            return result;
+          }, [])
+          .map((page, index) =>
+            page === "..." ? (
+              <Typography
+                key={`dots-${index}`}
+                variant="caption"
+                sx={{ px: 0.5 }}
+              >
+                ...
+              </Typography>
+            ) : (
+              <Button
+                key={page}
+                size="small"
+                onClick={() => table.setPageIndex(page)}
+                sx={{
+                  minWidth: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  backgroundColor:
+                    page === pageIndex ? "#0a0a0a" : "transparent",
+                  color: page === pageIndex ? "#fff" : "#4b5563",
+                  "&:hover": {
+                    backgroundColor:
+                      page === pageIndex ? "#262626" : "#f3f4f6",
+                  },
+                }}
+              >
+                {page + 1}
+              </Button>
+            )
+          )}
+
+        <IconButton
+          size="small"
+          disabled={!table.getCanNextPage()}
+          onClick={() => table.nextPage()}
+          sx={{
+            border: "1px solid #e5e7eb",
+            width: 28,
+            height: 28,
+          }}
+        >
+          <KeyboardArrowRight sx={{ fontSize: 16 }} />
+        </IconButton>
+
+      </Stack>
+    </Box>
+  );
+},
   });
+
+    const handlePrimaryImageChange = (e) => {
+  const file = e.target.files?.[0];
+
+  if (!file) return;
+
+  const allowedTypes = [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    alert("Please select a PNG, JPG, JPEG, or WEBP image.");
+    e.target.value = "";
+    return;
+  }
+
+  if (file.size > 25 * 1024 * 1024) {
+    alert("Image size should not exceed 25MB.");
+    e.target.value = "";
+    return;
+  }
+
+  setPrimaryImageFile(file);
+
+  const previewUrl = URL.createObjectURL(file);
+  setPrimaryImagePreview((previousPreview) => {
+    if (previousPreview) {
+      URL.revokeObjectURL(previousPreview);
+    }
+
+    return previewUrl;
+  });
+};
 
   // Inspector Tag Handlers
   const handleRemoveTag = (tagToRemove) => {
@@ -638,14 +796,24 @@ export default function ProductsCatalog() {
   // Inspector Save / Draft / Discard Handlers
   const handleSaveInspector = (targetStatus) => {
     if (!inspectorProduct) return;
+    let filterCategoryId= categoryList?.find((item)=> item.categoryName === inspectorProduct.categoryName)
+    let filterSubCategoryId= subcategoryList?.find((item)=> item.subcategoryName === inspectorProduct.subcategoryName)
     const updated = {
-      ...inspectorProduct,
+      // ...inspectorProduct,
       status: targetStatus,
+      categoryId:filterCategoryId?.id,
+      subcategoryId:filterSubCategoryId?.id,
+      image:primaryImageFile,
+      basePrice:inspectorProduct?.basePrice,
+      productName:inspectorProduct?.productName,
+      description:inspectorProduct?.description
     };
+    dispatch(actions.updateProduct(pagination,inspectorProduct?.id,updated))
     setInspectorProduct(updated);
     setProducts((prev) =>
       prev.map((p) => (p.id === updated.id ? updated : p))
     );
+    console.log('updated product__',updated)
   };
 
   const handleDiscardInspector = () => {
@@ -687,6 +855,27 @@ export default function ProductsCatalog() {
     setNewProdSku("");
     setCreateOpen(false);
   };
+
+  const handleProductFilter = (categoryId, subcategoryId) => {
+  if (categoryId === "ALL" && subcategoryId === "ALL") {
+    dispatch(
+      actions.fetchAllProducts(
+        pagination.pageIndex,
+        pagination.pageSize
+      )
+    );
+  } else {
+    dispatch(
+      actions.fetchAllProducts(
+        pagination.pageIndex,
+        pagination.pageSize,
+        "",
+        categoryId === "ALL" ? "" : categoryId,
+        subcategoryId === "ALL" ? "" : subcategoryId
+      )
+    );
+  }
+};
 
   return (
     <Box
@@ -1128,7 +1317,9 @@ export default function ProductsCatalog() {
                 <Select
                   size="small"
                   value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  onChange={(e) => {setCategoryFilter(e.target.value)
+                     handleProductFilter(e.target.value, subcategoryFilter);
+                  }}
                   sx={{
                     borderRadius: 99,
                     backgroundColor: "#f3f4f6",
@@ -1139,16 +1330,20 @@ export default function ProductsCatalog() {
                   }}
                 >
                   <MenuItem value="ALL">Category: All</MenuItem>
-                  <MenuItem value="T-SHIRTS">Category: T-Shirts</MenuItem>
-                  <MenuItem value="SHIRTS">Category: Shirts</MenuItem>
-                  <MenuItem value="PANTS">Category: Pants</MenuItem>
-                  <MenuItem value="OUTERWEAR">Category: Outerwear</MenuItem>
+                   {categoryList?.map((category) => (
+                                <MenuItem key={category.id} value={category.id}>
+                                  {category.categoryName || category.name}
+                                </MenuItem>
+                              ))}
                 </Select>
 
                  <Select
                     size="small"
                     value={subcategoryFilter}
-                    onChange={(e) => setSubcategoryFilter(e.target.value)}
+                    onChange={(e) =>{ 
+                      setSubcategoryFilter(e.target.value)
+                        handleProductFilter(categoryFilter, e.target.value);
+                    }}
                     sx={{
                       borderRadius: 99,
                       backgroundColor: "#f3f4f6",
@@ -1161,11 +1356,11 @@ export default function ProductsCatalog() {
                   >
                     <MenuItem value="ALL">Subcategory: All</MenuItem>
 
-                    {subcategoryOptions.map((subcategory) => (
-                      <MenuItem key={subcategory} value={subcategory}>
-                        {subcategory}
-                      </MenuItem>
-                    ))}
+                    {subcategoryList?.map((subCategory) => (
+                                 <MenuItem key={subCategory.id} value={subCategory.id}>
+                                   {subCategory.subcategoryName || subCategory.name}
+                                 </MenuItem>
+                               ))}
                   </Select>
 
                 <Select
@@ -1298,7 +1493,7 @@ export default function ProductsCatalog() {
                   QUICK EDIT RECORD
                 </Typography>
                 <Typography variant="h6" fontWeight={700} color="#111827">
-                  {inspectorProduct.title}
+                  {inspectorProduct.productName}
                 </Typography>
               </Box>
               <IconButton
@@ -1335,46 +1530,101 @@ export default function ProductsCatalog() {
 
               <Stack direction="row" spacing={1.5}>
                 {/* Primary Product Cover Upload Box */}
-                <Box
-                  sx={{
-                    flex: 1,
-                    p: 2,
-                    borderRadius: 3.5,
-                    backgroundColor: "#f3f4f6",
-                    textAlign: "center",
-                    cursor: "pointer",
-                    "&:hover": { backgroundColor: "#e5e7eb" },
-                  }}
-                >
-                  <Avatar
-                    variant="rounded"
-                    sx={{
-                      width: 34,
-                      height: 34,
-                      bgcolor: "#e5e7eb",
-                      color: "#374151",
-                      mx: "auto",
-                      mb: 1,
-                    }}
-                  >
-                    <AddPhotoAlternateOutlined fontSize="small" />
-                  </Avatar>
-                  <Typography
-                    variant="caption"
-                    fontWeight={700}
-                    color="#111827"
-                    display="block"
-                  >
-                    Primary Product Cover
-                  </Typography>
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    fontSize={9.5}
-                  >
-                    CLICK OR DRAG IMAGE
-                  </Typography>
-                </Box>
+              
+{/* Primary Product Cover Upload Box */}
+<Box
+  onClick={() => primaryImageInputRef.current?.click()}
+  onDragOver={(e) => e.preventDefault()}
+  onDrop={(e) => {
+    e.preventDefault();
+
+    const file = e.dataTransfer.files?.[0];
+
+    if (file) {
+      handlePrimaryImageChange({
+        target: {
+          files: [file],
+          value: "",
+        },
+      });
+    }
+  }}
+  sx={{
+    flex: 1,
+    p: 2,
+    borderRadius: 3.5,
+    backgroundColor: "#f3f4f6",
+    textAlign: "center",
+    cursor: "pointer",
+    border: "1px dashed #d1d5db",
+    "&:hover": {
+      backgroundColor: "#e5e7eb",
+      borderColor: "#9ca3af",
+    },
+  }}
+>
+  <input
+    ref={primaryImageInputRef}
+    type="file"
+    accept="image/png,image/jpeg,image/webp"
+    hidden
+    onChange={handlePrimaryImageChange}
+  />
+  {console.log('image_preview',primaryImagePreview,inspectorProduct.image)}
+
+{primaryImagePreview || inspectorProduct.image ? (
+  <Box
+    component="img"
+    src={
+      primaryImagePreview ||
+      `http://localhost:5000/api/ecommerce/${inspectorProduct.image}`
+    }
+    alt="Product cover preview"
+    sx={{
+      width: "100%",
+      height: 85,
+      objectFit: "contain",
+      borderRadius: 2,
+      mb: 1,
+    }}
+  />
+) : (
+  <Avatar
+    variant="rounded"
+    sx={{
+      width: 34,
+      height: 34,
+      bgcolor: "#e5e7eb",
+      color: "#374151",
+      mx: "auto",
+      mb: 1,
+    }}
+  >
+    <AddPhotoAlternateOutlined fontSize="small" />
+  </Avatar>
+)}
+  <Typography
+    variant="caption"
+    fontWeight={700}
+    color="#111827"
+    display="block"
+  >
+    {primaryImageFile
+      ? primaryImageFile.name
+      : "Primary Product Cover"}
+  </Typography>
+
+  <Typography
+    variant="caption"
+    color="text.secondary"
+    fontSize={9.5}
+  >
+    {primaryImageFile
+      ? "CLICK TO CHANGE IMAGE"
+      : "CLICK OR DRAG IMAGE"}
+  </Typography>
+</Box>
+
 
                 {/* Size Guide & Tech Spec Upload Box */}
                 <Box
@@ -1446,11 +1696,11 @@ export default function ProductsCatalog() {
               <TextField
                 fullWidth
                 size="small"
-                value={inspectorProduct.title}
+                value={inspectorProduct.productName}
                 onChange={(e) =>
                   setInspectorProduct({
                     ...inspectorProduct,
-                    title: e.target.value,
+                    productName: e.target.value,
                   })
                 }
                 sx={{
@@ -1475,16 +1725,16 @@ export default function ProductsCatalog() {
                   display="block"
                   mb={0.5}
                 >
-                  SKU (Stock Keeping Unit)
+                  SKU (Total Count Unit)
                 </Typography>
                 <TextField
                   fullWidth
                   size="small"
-                  value={inspectorProduct.sku}
+                  value={inspectorProduct.variantCount}
                   onChange={(e) =>
                     setInspectorProduct({
                       ...inspectorProduct,
-                      sku: e.target.value,
+                      variantCount: e.target.value,
                     })
                   }
                   sx={{
@@ -1498,7 +1748,7 @@ export default function ProductsCatalog() {
                 />
               </Box>
 
-              <Box sx={{ flex: 1 }}>
+              {/* <Box sx={{ flex: 1 }}>
                 <Typography
                   variant="caption"
                   fontWeight={600}
@@ -1527,7 +1777,7 @@ export default function ProductsCatalog() {
                     },
                   }}
                 />
-              </Box>
+              </Box> */}
             </Stack>
 
             {/* Base Price + Compare-at Price */}
@@ -1540,7 +1790,7 @@ export default function ProductsCatalog() {
                   display="block"
                   mb={0.5}
                 >
-                  Base Price ($ USD)
+                  Base Price ($ INR)
                 </Typography>
                 <TextField
                   fullWidth
@@ -1569,7 +1819,7 @@ export default function ProductsCatalog() {
                 />
               </Box>
 
-              <Box sx={{ flex: 1 }}>
+              {/* <Box sx={{ flex: 1 }}>
                 <Typography
                   variant="caption"
                   fontWeight={600}
@@ -1604,7 +1854,7 @@ export default function ProductsCatalog() {
                     },
                   }}
                 />
-              </Box>
+              </Box> */}
             </Stack>
 
             {/* Editorial Garment Description with Rich-Text Toolbar */}
@@ -1668,7 +1918,7 @@ export default function ProductsCatalog() {
             </Box>
 
             {/* Classification & Tagging */}
-            <Typography
+            {/* <Typography
               variant="caption"
               fontWeight={700}
               color="#6b7280"
@@ -1677,7 +1927,7 @@ export default function ProductsCatalog() {
               mb={1.2}
             >
               CLASSIFICATION & TAGGING
-            </Typography>
+            </Typography> */}
 
             <Stack direction="row" spacing={1.2} sx={{ mb: 1.8 }}>
               <Box sx={{ flex: 1 }}>
@@ -1693,11 +1943,11 @@ export default function ProductsCatalog() {
                 <Select
                   fullWidth
                   size="small"
-                  value={inspectorProduct.inspectorCategory}
+                  value={inspectorProduct.categoryName}
                   onChange={(e) =>
                     setInspectorProduct({
                       ...inspectorProduct,
-                      inspectorCategory: e.target.value,
+                      categoryName: e.target.value,
                     })
                   }
                   sx={{
@@ -1707,10 +1957,9 @@ export default function ProductsCatalog() {
                     "& fieldset": { border: "none" },
                   }}
                 >
-                  <MenuItem value="T-Shirts">T-Shirts</MenuItem>
-                  <MenuItem value="Shirts">Shirts</MenuItem>
-                  <MenuItem value="Pants">Pants</MenuItem>
-                  <MenuItem value="Outerwear">Outerwear</MenuItem>
+                  {categoryList && categoryList?.map((item)=>{
+                   return <MenuItem value={item.categoryName}>{item.categoryName}</MenuItem>
+                  })}
                 </Select>
               </Box>
 
@@ -1727,11 +1976,11 @@ export default function ProductsCatalog() {
                 <Select
                   fullWidth
                   size="small"
-                  value={inspectorProduct.inspectorSubcategory}
+                  value={inspectorProduct.subcategoryName}
                   onChange={(e) =>
                     setInspectorProduct({
                       ...inspectorProduct,
-                      inspectorSubcategory: e.target.value,
+                      subcategoryName: e.target.value,
                     })
                   }
                   sx={{
@@ -1741,20 +1990,17 @@ export default function ProductsCatalog() {
                     "& fieldset": { border: "none" },
                   }}
                 >
-                  <MenuItem value="Tops / Heavyweight Tees">
-                    Tops / Heavyweight Tees
+                  {subcategoryList?.map((item)=>(
+                  <MenuItem value={item.subcategoryName}>
+                    {item.subcategoryName}
                   </MenuItem>
-                  <MenuItem value="Woven Tops">Woven Tops</MenuItem>
-                  <MenuItem value="Bottoms / Trousers">
-                    Bottoms / Trousers
-                  </MenuItem>
-                  <MenuItem value="Coats & Jackets">Coats & Jackets</MenuItem>
+                  ))}
                 </Select>
               </Box>
             </Stack>
 
             {/* Tags & Keywords Chip Box */}
-            <Box sx={{ mb: 3 }}>
+            {/* <Box sx={{ mb: 3 }}>
               <Typography
                 variant="caption"
                 fontWeight={600}
@@ -1802,7 +2048,7 @@ export default function ProductsCatalog() {
                   }}
                 />
               </Box>
-            </Box>
+            </Box> */}
 
             {/* Footer Action Buttons */}
             <Stack
@@ -1851,7 +2097,7 @@ export default function ProductsCatalog() {
                 <Button
                   size="small"
                   variant="contained"
-                  onClick={() => handleSaveInspector("PUBLISHED")}
+                  onClick={() => handleSaveInspector("published")}
                   sx={{
                     borderRadius: 99,
                     textTransform: "none",
@@ -1874,63 +2120,12 @@ export default function ProductsCatalog() {
       </Box>
 
       {/* Create New Product Modal */}
-      <Dialog
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        maxWidth="xs"
-        fullWidth
-        PaperProps={{ sx: { borderRadius: 4, p: 1 } }}
-      >
-        <DialogTitle sx={{ fontWeight: 700 }}>Create New Product</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1 }}>
-            <TextField
-              label="Product Title"
-              fullWidth
-              size="small"
-              placeholder="e.g. Heavyweight Boxy Hoodie"
-              value={newProdTitle}
-              onChange={(e) => setNewProdTitle(e.target.value)}
-            />
-            <TextField
-              label="SKU (optional)"
-              fullWidth
-              size="small"
-              placeholder="e.g. AT-HDY-012"
-              value={newProdSku}
-              onChange={(e) => setNewProdSku(e.target.value)}
-            />
-            <TextField
-              label="Base Price ($ USD)"
-              fullWidth
-              size="small"
-              type="number"
-              value={newProdPrice}
-              onChange={(e) => setNewProdPrice(e.target.value)}
-            />
-          </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button
-            onClick={() => setCreateOpen(false)}
-            sx={{ textTransform: "none", color: "#6b7280" }}
-          >
-            Cancel
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleCreateProduct}
-            sx={{
-              borderRadius: 99,
-              textTransform: "none",
-              backgroundColor: "#0a0a0a",
-              "&:hover": { backgroundColor: "#262626" },
-            }}
-          >
-            Create Product
-          </Button>
-        </DialogActions>
-      </Dialog>
+      <CreateProductDialogue
+       createOpen={createOpen}
+       setCreateOpen={setCreateOpen}
+       categoryList={categoryList}
+       subcategoryList={subcategoryList}
+      />
     </Box>
   );
 }

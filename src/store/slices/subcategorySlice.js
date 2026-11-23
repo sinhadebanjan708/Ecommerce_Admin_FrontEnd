@@ -18,7 +18,7 @@ const subcategorySlice = createSlice({
       state.subcategoryList = Array.isArray(response)
     ? response
     : response?.content ?? [];
-      state.totalRecords= action.payload.totalElements
+      state.totalRecords= action.payload.data.totalElements
     }
   },
 });

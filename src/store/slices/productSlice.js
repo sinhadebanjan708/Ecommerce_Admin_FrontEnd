@@ -9,19 +9,17 @@ const initialState = {
   subcategoryList: null
 }
 
-const subcategorySlice = createSlice({
+const productSlice = createSlice({
   name: "category",
   initialState,
   reducers: {
-    storeSubcategoryList(state,action){
-      const response = action.payload?.data;
-      state.subcategoryList = Array.isArray(response)
-    ? response
-    : response?.content ?? [];
-      state.totalRecords= action.payload.totalElements
+    storeProductList(state,action){
+    //   const response = action.payload?.data;
+      state.productList = action.payload.data
+      state.totalRecords= action.payload.pagination.total
     }
   },
 });
 
-export const { storeSubcategoryList } = subcategorySlice.actions;
-export default subcategorySlice.reducer;
+export const { storeProductList } = productSlice.actions;
+export default productSlice.reducer;

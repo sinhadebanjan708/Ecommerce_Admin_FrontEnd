@@ -3,30 +3,75 @@ const baseURl = "https://plenty-constant-residual.ngrok-free.dev";
 
 let token = localStorage.getItem("access-token");
 
-export const fetchsubCategoryService = (pageIndex,pageSize,search) => {
+// export const fetchsubCategoryService = (pageIndex,pageSize,search) => {
+//   return new Promise(async (resolve, reject) => {
+//     try {
+//       let response;
+//       if(search){
+//         response = await axiosInstance.get(
+//         `sub-categories/?pageIndex=${pageIndex}&pageSize=${pageSize}&search=${search}`,
+//         {
+//           headers: {
+//             Authorization: `Bearer ${token}`,
+//           },
+//         }, // request body (empty)
+//       );
+//       }else{
+//           response = await axiosInstance.get(
+//            `sub-categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
+//            {
+//              headers: {
+//                Authorization: `Bearer ${token}`,
+//              },
+//            }, // request body (empty)
+//          );
+
+//       }
+//       resolve(response?.data);
+//     } catch (err) {
+//       reject(err);
+//     }
+//   });
+// };
+
+export const fetchsubCategoryService = (pageIndex, pageSize, search) => {
   return new Promise(async (resolve, reject) => {
     try {
       let response;
-      if(search){
+
+      const hasPagination =
+        pageIndex !== undefined && pageSize !== undefined;
+
+      const hasSearch = search?.trim();
+
+      if (hasPagination || hasSearch) {
+        const params = new URLSearchParams();
+
+        if (hasPagination) {
+          params.append("pageIndex", pageIndex);
+          params.append("pageSize", pageSize);
+        }
+
+        if (hasSearch) {
+          params.append("search", search.trim());
+        }
+
         response = await axiosInstance.get(
-        `sub-categories/?pageIndex=${pageIndex}&pageSize=${pageSize}&search=${search}`,
-        {
+          `sub-categories/?${params.toString()}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        response = await axiosInstance.get(`sub-categories/`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }, // request body (empty)
-      );
-      }else{
-          response = await axiosInstance.get(
-           `sub-categories/?pageIndex=${pageIndex}&pageSize=${pageSize}`,
-           {
-             headers: {
-               Authorization: `Bearer ${token}`,
-             },
-           }, // request body (empty)
-         );
-
+        });
       }
+
       resolve(response?.data);
     } catch (err) {
       reject(err);

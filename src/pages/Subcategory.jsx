@@ -52,6 +52,7 @@ import {
 } from "@mui/icons-material";
 import { useDispatch,useSelector } from "react-redux";
 import * as actions from "../store/actions"
+import { fetchSubCategoryByCategoryId, updatesubCategory } from "../store/actions/subcategory.action";
 import CreateSubCategory from "./CreateSubCategory";
 
 const ROOT_CATEGORIES_DATA = [
@@ -407,12 +408,15 @@ React.useEffect(()=>{
     console.log('changa__',cat)
     setSelectedCategoryId(cat.id);
     // setInspectorItem(cat.subcategories[0] || null);
-    dispatch(actions.fetchSubCategoryByCategoryId(cat.id))
+    dispatch(fetchSubCategoryByCategoryId(cat.id))
     setSearchQuery("");
     setStatusTab("ALL");
     setCategoryMenuAnchor(null);
   };
-
+console.log(
+  "fetchSubCategoryByCategoryId:",
+  actions.fetchSubCategoryByCategoryId
+);
   // Helper to update current category's subcategories list
   const updateCurrentSubcategories = (updaterFn) => {
     setAllCategories((prev) =>
@@ -777,7 +781,7 @@ const handleSubcategoryImageChange = (e) => {
   // Inspector Save & Discard Handlers
   const handleSaveInspector = () => {
     if (!inspectorsubCategory) return;
-    dispatch(actions.updatesubCategory(pagination,inspectorsubCategory.id, inspectorsubCategory));
+    dispatch(updatesubCategory(pagination,inspectorsubCategory.id, inspectorsubCategory));
     updateCurrentSubcategories((list) =>
       list.map((item) =>
         item.id === inspectorsubCategory.id ? inspectorsubCategory : item

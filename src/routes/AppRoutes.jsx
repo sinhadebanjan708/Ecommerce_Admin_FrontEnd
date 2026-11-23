@@ -13,7 +13,8 @@ import Posts from "../pages/Posts";
 import Category from "../pages/Category";
 import NotFound from "../pages/NotFound";
 import Subcategories from "../pages/Subcategory";
-import Product from "../pages/Product"
+import Product from "../pages/Product";
+import ProductVariant from "../pages/ProductVariant"
 
 export default function AppRoutes() {
   return (
@@ -33,6 +34,7 @@ export default function AppRoutes() {
           <Route path="/category" element={<Category />} />
           <Route path="/sub-category" element={<Subcategories />} />
           <Route path="/product" element={<Product />} />
+          <Route path="/product-variant" element={<ProductVariant />} />
         </Route>
       </Route>
 

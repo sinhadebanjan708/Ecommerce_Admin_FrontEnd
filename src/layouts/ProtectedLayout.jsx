@@ -127,11 +127,18 @@ export default function ProtectedLayout() {
                 Subcategory
               </MenuItem>
               
-                 <MenuItem
+              <MenuItem
                 icon={<ArticleOutlined fontSize="small" />}
                 component={<NavLink to="/product" />}
               >
                 Product
+              </MenuItem>
+
+               <MenuItem
+                icon={<ArticleOutlined fontSize="small" />}
+                component={<NavLink to="/product-variant" />}
+              >
+                Product Variant
               </MenuItem>
             </Menu>
           </Box>

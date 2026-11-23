@@ -5,7 +5,8 @@ import globalReducer from "./slices/globalSlice";
 import categoryReducer from "./slices/categorySlice";
 import alertReducer from "./slices/alertSlice";
 import subcategoryReducer from "./slices/subcategorySlice";
-import productReducer from "./slices/productSlice"
+import productReducer from "./slices/productSlice";
+import productVariantReducer from "./slices/productVariantSlice";
 
 const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ const store = configureStore({
     alert:alertReducer,
     subcategory:subcategoryReducer,
     product:productReducer,
+    productVarinat:productVariantReducer
   },
 });
 

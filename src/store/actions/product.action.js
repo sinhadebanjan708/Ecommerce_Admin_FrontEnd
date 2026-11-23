@@ -1,9 +1,9 @@
-import { fetchsubCategoryService, createSubCategoryService, fetchSubCategoryBycategoryId, updateSubCategoryService }
- from "../services/subcategory.service";
+import { fetchProductService, createProductService, fetchSubCategoryBycategoryId, updateProductService }
+ from "../services/product.service";
 // import { showAlert } from "../slices/alertSlice";
 import {
-storeSubcategoryList
-} from "../slices/subcategorySlice";
+storeProductList
+} from "../slices/productSlice";
 import { showAlert , hideAlert } from "../slices/alertSlice";
 import {
   globalLoaderOpen,
@@ -12,41 +12,53 @@ import {
 // import JSEncrypt from "jsencrypt";
 
 
-export const fetchAllSubCategoris = (pageIndex,pageSize,search) => async (dispatch) => {
+export const fetchAllProducts = (
+  pageIndex,
+  pageSize,
+  search,
+  categoryId,
+  subCategoryId
+) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
-    // response shape: { employee: {...}, menus: [...] }
-    const response = await fetchsubCategoryService(pageIndex,pageSize,search);
 
-    dispatch(storeSubcategoryList(response));
-     dispatch(globalLoaderClose());
-    // dispatch(
-    //   showAlert({
-    //     type: "success",
-    //     title: "Login Successful",
-    //     message: `Welcome back, ${response.employee?.employeeName || ""}!`,
-    //   }),
-    // );
+    console.log("Fetching products...", {
+      pageIndex,
+      pageSize,
+      search,
+      categoryId,
+      subCategoryId,
+    });
 
-    return { success: true, data: response };
+    const response = await fetchProductService(
+      pageIndex,
+      pageSize,
+      search,
+      categoryId,
+      subCategoryId
+    );
+
+    console.log("Product API response:", response.data?.data);
+
+    dispatch(storeProductList(response.data?.data));
+
+    return {
+      success: true,
+      data: response.data,
+    };
   } catch (err) {
-    // err shape from API: { timestamp, status, error, message }
-    const message = err?.message || "Login failed";
-    dispatch(globalLoaderClose());
-    // dispatch(loginFailure(message));
-    // dispatch(
-    //   showAlert({
-    //     type: "error",
-    //     title: err?.error || "Login Failed",
-    //     message,
-    //   }),
-    // );
+    console.error("Fetch products error:", err);
 
-    return { success: false, message };
+    return {
+      success: false,
+      message: err?.response?.data?.message || err?.message || "Failed to fetch products",
+    };
   } finally {
-    // dispatch(globalLoaderClose());
+    dispatch(globalLoaderClose());
   }
 };
+
+
 export const fetchSubCategoryByCategoryId = (categoryId) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
@@ -82,20 +94,20 @@ export const fetchSubCategoryByCategoryId = (categoryId) => async (dispatch) => 
     // dispatch(globalLoaderClose());
   }
 };
-export const createSubCategory = (payload) => async (dispatch) => {
+export const createProduct = (payload) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await createSubCategoryService(payload);
+    const response = await createProductService(payload);
 
     // dispatch(storeCategoryList(response));
-     dispatch(fetchAllSubCategoris(0,5))
+     dispatch(fetchAllProducts(0,5))
      dispatch(globalLoaderClose());
     dispatch(
       showAlert({
         type: "success",
         title: "Successful",
-        message: `Sub Category Created Successfully`,
+        message: `Product Created Successfully`,
       }),
     );
 
@@ -119,14 +131,14 @@ export const createSubCategory = (payload) => async (dispatch) => {
   }
 };
 
-export const updatesubCategory = (pagination,subcategoryId,payload) => async (dispatch) => {
+export const updateProduct = (pagination,productId,payload) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await updateSubCategoryService(subcategoryId , payload);
+    const response = await updateProductService(productId , payload);
 
     // dispatch(storeCategoryList(response));
-     dispatch(fetchAllSubCategoris(pagination?.pageIndex,pagination?.pageSize))
+     dispatch(fetchAllProducts(pagination?.pageIndex,pagination?.pageSize))
      dispatch(globalLoaderClose());
     dispatch(
       showAlert({
