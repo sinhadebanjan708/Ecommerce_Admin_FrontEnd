@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutlined";
 import {
   Avatar,
   Box,
@@ -15,7 +16,13 @@ import {
   Select,
   Stack,
   TextField,
-  Typography
+  Typography,
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogActions,
+  Tooltip,
+  DialogContentText
 } from "@mui/material";
 import { FiberManualRecord } from "@mui/icons-material"
 import {
@@ -39,6 +46,7 @@ import {
 import { useDispatch, useSelector } from "react-redux";
 import * as actions from "../store/actions"
 import CreateProductVariantDialog from "./CreateProductVariantDialogue";
+
 
 const PRODUCTS = [
   { id: 101, name: "Oversized Heavyweight Cotton Tee" },
@@ -260,9 +268,10 @@ export default function ProductVariantInventory() {
     const [createDialogOpen, setCreateDialogOpen] = useState(false);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const productList= useSelector((state)=>state.product.productList)
+    const totalRecords= useSelector((state)=>state.productVarinat.totalRecords)
     const productVarinatList= useSelector((state)=>state.productVarinat.productVariantList)
     const [productFilter, setProductFilter] = useState("ALL");
-  const [variants, setVariants] = useState(productVarinatList && productVarinatList.length > 0 ? productVarinatList : []);
+//   const [variants, setVariants] = useState(productVarinatList && productVarinatList.length > 0 ? productVarinatList : []);
   const [selectedVariantId, setSelectedVariantId] = useState(1);
   const [colorFilter, setColorFilter] = useState("ALL");
   const [search, setSearch] = useState("");
@@ -271,10 +280,15 @@ export default function ProductVariantInventory() {
   const [notice, setNotice] = useState("");
   const [form, setForm] = useState(emptyForm);
   const fileInputRef = useRef(null);
+  const [rowSelection, setRowSelection] = useState({});
   const [pagination, setPagination] = useState({
     pageIndex: 0,
     pageSize: 5,
   });
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+const [variantToDelete, setVariantToDelete] = useState(null);
+const [images, setImages] = useState([]);
+const [deleteImageIds, setDeleteImageIds] = useState([]);
   console.log('media files__',mediaFiles)
 
 //   const selectedVariant =
@@ -314,19 +328,50 @@ useEffect(() => {
   }
 }, [productList]);
 
-useEffect(() => {
-  if (productFilter && productFilter !== "ALL") {
-    setSelectedVariantId(null);
+// useEffect(() => {
+//   if (productFilter && productFilter !== "ALL") {
+//     setSelectedVariantId(null);
 
+//     dispatch(
+//       actions.fetchAllProductVariants(
+//         productFilter,
+//         pagination.pageIndex,
+//         pagination.pageSize
+//       )
+//     );
+//   }
+// }, [dispatch, productFilter, pagination.pageIndex, pagination.pageSize]);
+
+
+useEffect(() => {
+  if (!productFilter || productFilter === "ALL") return;
+
+  const timer = setTimeout(() => {
     dispatch(
       actions.fetchAllProductVariants(
         productFilter,
         pagination.pageIndex,
-        pagination.pageSize
+        pagination.pageSize,
+        search.trim()
       )
     );
-  }
-}, [dispatch, productFilter, pagination.pageIndex, pagination.pageSize]);
+  }, 400);
+
+  return () => clearTimeout(timer);
+}, [
+  dispatch,
+  productFilter,
+  pagination.pageIndex,
+  pagination.pageSize,
+  search,
+]);
+
+useEffect(() => {
+  setPagination((prev) => ({
+    ...prev,
+    pageIndex: 0,
+  }));
+}, [productFilter, search]);
 
 useEffect(() => {
   if (productVarinatList?.length > 0) {
@@ -349,6 +394,7 @@ useEffect(() => {
       return;
     }
     setForm({
+      variantId: selectedVariant.id,
       productId: selectedVariant.productId ?? "",
       sku: selectedVariant.sku ?? "",
       price: selectedVariant.price ?? "",
@@ -381,11 +427,11 @@ useEffect(() => {
   setMediaFiles(existingImages);
   }, [selectedVariantId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-
+console.log('exsisting images___',mediaFiles)
   const filteredVariants = useMemo(() => {
   const normalizedSearch = search.trim().toLowerCase();
 
-  return variants.filter((variant) => {
+  return productVarinatList?.filter((variant) => {
     const matchesProduct =
       productFilter === "ALL" ||
       String(variant.productId) === String(productFilter);
@@ -396,7 +442,7 @@ useEffect(() => {
     const matchesSearch =
       !normalizedSearch ||
       [
-        variant.productName,
+        // variant.productName,
         variant.color,
         variant.size,
         variant.sku,
@@ -407,7 +453,7 @@ useEffect(() => {
 
     return matchesProduct && matchesColor && matchesSearch;
   });
-}, [variants, productFilter, colorFilter, search]);
+}, [productVarinatList, productFilter, colorFilter, search]);
 
 //   const filteredVariants = useMemo(() => {
 //     const normalizedSearch = search.trim().toLowerCase();
@@ -422,6 +468,39 @@ useEffect(() => {
 //     });
 //   }, [variants, colorFilter, search]);
 
+const handleDeleteClick = (variant) => {
+  setVariantToDelete(variant);
+  setDeleteDialogOpen(true);
+};
+
+const handleConfirmDelete = async () => {
+  if (!variantToDelete) return;
+
+  try {
+    // Replace this with your actual Redux delete action
+    await dispatch(actions.deleteProductVariant(variantToDelete.id));
+
+    setDeleteDialogOpen(false);
+    setVariantToDelete(null);
+
+    // Refresh the current page
+    dispatch(
+      actions.fetchAllProductVariants(
+        productFilter,
+        pagination.pageIndex,
+        pagination.pageSize,
+        search.trim()
+      )
+    );
+
+    if (String(selectedVariantId) === String(variantToDelete.id)) {
+      setSelectedVariantId(null);
+      setIsEditorOpen(false);
+    }
+  } catch (error) {
+    console.error("Failed to delete variant:", error);
+  }
+};
   const handleFormChange = (field) => (event) => {
     const value = event.target.value;
     setForm((prev) => ({
@@ -432,42 +511,36 @@ useEffect(() => {
           : value,
     }));
   };
-
+console.log('form-data',form)
   const saveVariant = () => {
     if (!selectedVariantId) return;
-    setVariants((current) =>
-      current.map((v) =>
-        v.id === selectedVariantId
-          ? {
-              ...v,
-              ...form,
-              stock: Number(form.quantityAvailable) || 0,
-              status:
-                Number(form.quantityAvailable) <= (Number(form.reorderLevel) || 0)
-                  ? "LOW STOCK ALERT"
-                  : form.status === "LOW STOCK ALERT"
-                    ? "IN STOCK"
-                    : form.status,
-            }
-          : v
-      )
-    );
+     dispatch(
+    actions.updateProductVariant(
+      pagination,
+      form?.productId,
+      selectedVariantId,
+      form,
+      mediaFiles,
+      deleteImageIds
+    )
+  );
+  setDeleteImageIds([])
     setNotice("Variant saved (local state). Connect to your API when ready.");
   };
 
-  const updateStock = (variantId, amount) => {
-    setVariants((current) =>
-      current.map((variant) =>
-        variant.id === variantId
-          ? {
-              ...variant,
-              stock: Math.max(0, variant.stock + amount),
-              quantityAvailable: Math.max(0, (variant.quantityAvailable ?? variant.stock) + amount),
-            }
-          : variant
-      )
-    );
-  };
+//   const updateStock = (variantId, amount) => {
+//     setVariants((current) =>
+//       current.map((variant) =>
+//         variant.id === variantId
+//           ? {
+//               ...variant,
+//               stock: Math.max(0, variant.stock + amount),
+//               quantityAvailable: Math.max(0, (variant.quantityAvailable ?? variant.stock) + amount),
+//             }
+//           : variant
+//       )
+//     );
+//   };
 
   const handleMediaUpload = (event) => {
     const files = Array.from(event.target.files || []);
@@ -496,15 +569,71 @@ useEffect(() => {
     );
     event.target.value = "";
   };
+  const handleRemoveImage = (image) => {
+  if (image.isExisting) {
+    setDeleteImageIds((prev) => [
+      ...prev,
+      image.id,
+    ]);
+  }
 
-  const removeMedia = (id) => {
-    setMediaFiles((current) => {
-      const target = current.find((item) => item.id === id);
-      if (target) URL.revokeObjectURL(target.preview);
-      return current.filter((item) => item.id !== id);
-    });
-  };
+  setImages((prev) =>
+    prev.filter((item) => item.id !== image.id)
+  );
+};
+//   const removeMedia = (id) => {
+//     setMediaFiles((current) => {
+//       const target = current.find((item) => item.id === id);
+//       if (target) URL.revokeObjectURL(target.preview);
+//       return current.filter((item) => item.id !== id);
+//     });
+//   };
 
+// const removeMedia = (id) => {
+//   setMediaFiles((current) => {
+//     const target = current.find((item) => item.id === id);
+
+//     if (!target) return current;
+
+//     // Track only existing database images for deletion
+//     if (target.isExisting && target.id != null) {
+//       setDeleteImageIds((prev) =>
+//         prev.includes(target.id) ? prev : [...prev, target.id]
+//       );
+//     }
+
+//     // Revoke preview URL if available
+//     if (target.preview?.startsWith("blob:")) {
+//       URL.revokeObjectURL(target.preview);
+//     }
+
+//     return current.filter((item) => item.id !== id);
+//   });
+//   dispatch(actions.updateProductVariant(pagination,form?.productId,selectedVariantId,form,mediaFiles))
+// };
+
+const removeMedia = (id) => {
+  const target = mediaFiles.find((item) => item.id === id);
+
+  if (!target) return;
+
+  // Track deleted existing database images
+  if (target.isExisting && target.id != null) {
+    setDeleteImageIds((prev) =>
+      prev.includes(target.id) ? prev : [...prev, target.id]
+    );
+  }
+
+  // Revoke preview URL
+  if (target.preview?.startsWith("blob:")) {
+    URL.revokeObjectURL(target.preview);
+  }
+
+  // Remove image from UI
+  setMediaFiles((current) =>
+    current.filter((item) => item.id !== id)
+  );
+};
 const columns = useMemo(
   () => [
     {
@@ -815,6 +944,32 @@ const columns = useMemo(
         );
       },
     },
+    {
+  id: "delete",
+  header: "ACTION",
+  size: 75,
+  enableSorting: false,
+  enableColumnFilter: false,
+  Cell: ({ row }) => (
+    <Tooltip title="Delete variant">
+      <IconButton
+        size="small"
+        onClick={(event) => {
+          event.stopPropagation();
+          handleDeleteClick(row.original);
+        }}
+        sx={{
+          color: "#dc2626",
+          "&:hover": {
+            bgcolor: "#fef2f2",
+          },
+        }}
+      >
+        <DeleteOutlineIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  ),
+},
   ],
   []
 );
@@ -1008,21 +1163,113 @@ const columns = useMemo(
 //     }),
 //     state: {},
 //   });
+// const table = useMaterialReactTable({
+//   columns,
+// //   data: INITIAL_VARIANTS || [],
+//   data: productVarinatList || [],
+
+//   enableTopToolbar: false,
+//   enableBottomToolbar: false,
+//   enableColumnActions: false,
+//   enableSorting: false,
+//   enablePagination: true,
+//   enableColumnFilters: false,
+//   enableDensityToggle: false,
+//   enableFullScreenToggle: false,
+//   enableHiding: false,
+//   enableRowActions: false,
+//   enablePagination: true,
+//   rowCount: totalRecords,
+//   onPaginationChange: setPagination,
+//   enableRowSelection: true,
+//     onRowSelectionChange: setRowSelection,
+//       state: {
+//     rowSelection,
+//     pagination,
+//   },
+//   muiTablePaperProps: {
+//     elevation: 0,
+//     sx: {
+//       borderRadius: 0,
+//       boxShadow: "none",
+//     },
+//   },
+
+//   muiTableContainerProps: {
+//     sx: {
+//       maxHeight: 570,
+//       overflowX: "auto",
+//     },
+//   },
+
+//   muiTableHeadCellProps: {
+//     sx: {
+//       bgcolor: "#f9fafb",
+//       color: "#6b7280",
+//       fontSize: 10,
+//       fontWeight: 800,
+//       letterSpacing: 0.5,
+//       whiteSpace: "nowrap",
+//       borderBottom: "1px solid #e5e7eb",
+//       py: 1.5,
+//     },
+//   },
+
+//   muiTableBodyCellProps: {
+//     sx: {
+//       borderBottom: "1px solid #f0f0f0",
+//       px: 1.5,
+//       py: 1.4,
+//       verticalAlign: "middle",
+//       whiteSpace: "nowrap",
+//     },
+//   },
+
+//   muiTableBodyRowProps: ({ row }) => ({
+//     onClick: () =>{ setSelectedVariantId(row.original.id)
+//          setIsEditorOpen(true);
+//     },
+//     sx: {
+//       cursor: "pointer",
+//       backgroundColor:
+//         row.original.id === selectedVariantId ? "#f9fafb" : "#fff",
+//       outline:
+//         row.original.id === selectedVariantId
+//           ? "1px solid #111827"
+//           : "none",
+//       outlineOffset: "-1px",
+//       "&:hover": {
+//         backgroundColor: "#f9fafb",
+//       },
+//     },
+//   }),
+// });
 const table = useMaterialReactTable({
   columns,
-//   data: INITIAL_VARIANTS || [],
   data: productVarinatList || [],
 
   enableTopToolbar: false,
-  enableBottomToolbar: false,
+  enableBottomToolbar: true,
   enableColumnActions: false,
   enableSorting: false,
-  enablePagination: false,
   enableColumnFilters: false,
   enableDensityToggle: false,
   enableFullScreenToggle: false,
   enableHiding: false,
   enableRowActions: false,
+
+  manualPagination: true,
+  rowCount: totalRecords || 0,
+
+  onPaginationChange: setPagination,
+
+  state: {
+    pagination,
+    rowSelection,
+  },
+
+  enableRowSelection: true,
+  onRowSelectionChange: setRowSelection,
 
   muiTablePaperProps: {
     elevation: 0,
@@ -1039,45 +1286,15 @@ const table = useMaterialReactTable({
     },
   },
 
-  muiTableHeadCellProps: {
-    sx: {
-      bgcolor: "#f9fafb",
-      color: "#6b7280",
-      fontSize: 10,
-      fontWeight: 800,
-      letterSpacing: 0.5,
-      whiteSpace: "nowrap",
-      borderBottom: "1px solid #e5e7eb",
-      py: 1.5,
-    },
-  },
-
-  muiTableBodyCellProps: {
-    sx: {
-      borderBottom: "1px solid #f0f0f0",
-      px: 1.5,
-      py: 1.4,
-      verticalAlign: "middle",
-      whiteSpace: "nowrap",
-    },
-  },
-
   muiTableBodyRowProps: ({ row }) => ({
-    onClick: () =>{ setSelectedVariantId(row.original.id)
-         setIsEditorOpen(true);
+    onClick: () => {
+      setSelectedVariantId(row.original.id);
+      setIsEditorOpen(true);
     },
     sx: {
       cursor: "pointer",
       backgroundColor:
         row.original.id === selectedVariantId ? "#f9fafb" : "#fff",
-      outline:
-        row.original.id === selectedVariantId
-          ? "1px solid #111827"
-          : "none",
-      outlineOffset: "-1px",
-      "&:hover": {
-        backgroundColor: "#f9fafb",
-      },
     },
   }),
 });
@@ -1323,9 +1540,51 @@ const table = useMaterialReactTable({
               <Chip label="LIVE STORE SYNC" size="small" sx={{ height: 19, bgcolor: "#050505", color: "#fff", fontSize: 8, fontWeight: 800 }} />
             </Stack>
             <MaterialReactTable table={table} />
+
+            <Dialog
+  open={deleteDialogOpen}
+  onClose={() => {
+    setDeleteDialogOpen(false);
+    setVariantToDelete(null);
+  }}
+  maxWidth="xs"
+  fullWidth
+>
+  <DialogTitle sx={{ fontWeight: 700 }}>
+    Delete Product Variant?
+  </DialogTitle>
+
+  <DialogContent>
+    <Typography variant="body2" color="text.secondary">
+      Are you sure you want to delete variant{" "}
+      <strong>{variantToDelete?.sku}</strong>?
+      This action cannot be undone.
+    </Typography>
+  </DialogContent>
+
+  <DialogActions sx={{ p: 2 }}>
+    <Button
+      onClick={() => {
+        setDeleteDialogOpen(false);
+        setVariantToDelete(null);
+      }}
+      color="inherit"
+    >
+      Cancel
+    </Button>
+
+    <Button
+      onClick={handleConfirmDelete}
+      variant="contained"
+      color="error"
+    >
+      Delete
+    </Button>
+  </DialogActions>
+</Dialog>
             <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ p: 1.3, bgcolor: "#f6f6f7" }}>
               <Typography sx={{ fontSize: 9, color: "#555" }}>
-                Showing {filteredVariants.length} of {variants.length} populated variants
+                Showing {filteredVariants?.length} of {productVarinatList?.length} populated variants
               </Typography>
               <Stack direction="row" spacing={0.7}>
                 <Button

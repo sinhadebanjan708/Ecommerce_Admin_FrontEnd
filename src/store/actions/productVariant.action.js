@@ -92,20 +92,20 @@ export const createProductVariant = (productId, payload) => async (dispatch) => 
   }
 };
 
-export const updateProductVariant = (pagination,productId,variantId,payload) => async (dispatch) => {
+export const updateProductVariant = (pagination,productId,variantId,payload,images,deleteImageIds) => async (dispatch) => {
   try {
     dispatch(globalLoaderOpen());
     // response shape: { employee: {...}, menus: [...] }
-    const response = await updateProductVariantService(productId , variantId , payload);
+    const response = await updateProductVariantService(productId , variantId , payload,images,deleteImageIds);
 
     // dispatch(storeCategoryList(response));
-     dispatch(fetchAllProducts(pagination?.pageIndex,pagination?.pageSize))
+     dispatch(fetchAllProductVariants(productId,pagination?.pageIndex,pagination?.pageSize,""))
      dispatch(globalLoaderClose());
     dispatch(
       showAlert({
         type: "success",
         title: "Successful",
-        message: `Sub Category upadted Successfully`,
+        message: `Product Variant updated Successfully`,
       }),
     );
 
@@ -125,7 +125,7 @@ export const updateProductVariant = (pagination,productId,variantId,payload) => 
 
     return { success: false, message };
   } finally {
-    // dispatch(globalLoaderClose());
+    dispatch(globalLoaderClose());
   }
 };
 // export const fetchSubCategoryByCategoryId = (categoryId) => async (dispatch) => {

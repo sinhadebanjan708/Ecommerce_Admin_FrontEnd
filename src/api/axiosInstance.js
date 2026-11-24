@@ -13,7 +13,13 @@ const axiosInstance = axios.create({
     "Content-Type": "application/json",
   },
 });
+axiosInstance.interceptors.request.use((config) => {
+  if (config.data instanceof FormData) {
+    delete config.headers["Content-Type"];
+  }
 
+  return config;
+});
 // Separate Axios instance for refreshing tokens.
 // This prevents the refresh request from triggering the same interceptor.
 const refreshAxios = axios.create({

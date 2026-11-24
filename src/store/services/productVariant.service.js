@@ -20,7 +20,7 @@ export const fetchProductVariantService = (
   }
 
 console.log('params',params)
-  return axiosInstance.get(`admin/products/${productId}/variants`, {
+  return axiosInstance.get(`admin/products/${productId}/variants?page=${pageIndex}&size=${pageSize}&search=${search}`, {
     headers: {
       Authorization: `Bearer ${token}`,
     },
@@ -83,29 +83,190 @@ export const fetchSubCategoryBycategoryId = (categoryId) => {
   });
 };
 // fetchSubCategoryBycategoryId
-export const updateProductVariantService = async (productId , variantId , payload) => {
+
+
+
+// export const updateProductVariantService = async (
+//   productId,
+//   variantId,
+//   payload,
+//   images = []
+// ) => {
+//   const formData = new FormData();
+
+//   const variantPayload = {
+//     sku: payload.sku,
+//     color: payload.color,
+//     size: payload.size,
+//     fit: payload.fit,
+//     price: payload.price,
+//     salePrice: payload.salePrice,
+//     status: payload.status,
+//     sellerType: payload.sellerType,
+//     deliveryDate: payload.deliveryDate,
+//   };
+
+//   formData.append(
+//     "variant",
+//     new Blob([JSON.stringify(variantPayload)], {
+//       type: "application/json",
+//     }),
+//     "variant.json"
+//   );
+
+// //   const retainedImageIds = images
+// //     .filter((item) => !(item instanceof File) && item?.id != null)
+// //     .map((item) => Number(item.id));
+
+// //   formData.append(
+// //     "retainedImageIds",
+// //     new Blob([JSON.stringify(retainedImageIds)], {
+// //       type: "application/json",
+// //     }),
+// //     "retainedImageIds.json"
+// //   );
+
+//   images.forEach((item) => {
+//     const file = item instanceof File ? item : item?.file;
+
+//     if (file instanceof File) {
+//       formData.append("images", file);
+//     }
+//   });
+
+//   const response = await axiosInstance.put(
+//     `admin/products/${productId}/variants/${variantId}`,
+//     formData,
+//     {
+//       headers: {
+//         "Content-Type": undefined,
+//       },
+//     }
+//   );
+
+//   return response?.data;
+// };
+
+export const updateProductVariantService = async (
+  productId,
+  variantId,
+  payload,
+  images = [],
+  deleteImageIds = []
+) => {
   const formData = new FormData();
 
-  formData.append("categoryId", payload.categoryId);
-  formData.append("productName", payload.productName);
-  formData.append("slug", payload.slug);
-  formData.append("subcategoryId", payload.subcategoryId);
-  formData.append("description", payload.description || "");
-  formData.append("basePrice", payload.basePrice || "");
-  formData.append("status", payload.status); // e.g., "ACTIVE" / "DRAFT" or boolean
+  const variantPayload = {
+    sku: payload.sku,
+    color: payload.color,
+    size: payload.size,
+    fit: payload.fit,
+    price: payload.price,
+    salePrice: payload.salePrice,
+    status: payload.status,
+    sellerType: payload.sellerType,
+      deliveryDate: payload.deliveryDate
+    ? `${payload.deliveryDate.substring(0, 10)}T00:00:00`
+    : null,
+  };
 
-  // Only append image if a File was actually selected
-  if (payload.image instanceof File) {
-    formData.append("image", payload.image); // Must match your backend multer field name (e.g. upload.single("image"))
+  // JSON multipart part
+  const variantBlob = new Blob(
+    [JSON.stringify(variantPayload)],
+    { type: "application/json" }
+  );
+
+  formData.append("variant", variantBlob, "variant.json");
+
+  // Deleted image IDs
+  if (deleteImageIds.length > 0) {
+    const deleteIdsBlob = new Blob(
+      [JSON.stringify(deleteImageIds)],
+      { type: "application/json" }
+    );
+
+    formData.append(
+      "deleteImageIds",
+      deleteIdsBlob,
+      "deleteImageIds.json"
+    );
   }
 
-  const response = await axiosInstance.put(`admin/products/${productId}/variants/${variantId}`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+  // New image files only
+  images.forEach((item) => {
+    const file = item instanceof File ? item : item?.file;
+
+    if (file instanceof File) {
+      formData.append("images", file);
+    }
   });
+
+  const response = await axiosInstance.put(
+    `admin/products/${productId}/variants/${variantId}`,
+    formData
+  );
 
   return response?.data;
 };
+
+
+
+// export const updateProductVariantService = async (productId , variantId , payload,images) => {
+//   const formData = new FormData();
+
+//   formData.append("productId", productId);
+//   formData.append("variantId", variantId);
+//   formData.append("sku", payload.sku);
+//   formData.append("color", payload.color);
+//   formData.append("price", payload.price || "");
+//   formData.append("salePrice", payload.salePrice || "");
+//   formData.append("status", payload.status); // e.g., "ACTIVE" / "DRAFT" or boolean
+//   formData.append("sellerType", payload.sellerType); // e.g., "ACTIVE" / "DRAFT" or boolean
+//   formData.append("deliveryDate", payload.deliveryDate); 
+//   // Variant data as JSON
+// // const variantPayload = {
+// //   sku,
+// //   price,
+// //   color,
+// //   size,
+// //   fit,
+// //   salePrice,
+// //   status,
+// //   sellerType,
+// //   deliveryDate,
+// //   warehouseId,
+// //   quantityAvailable,
+// //   quantityReserved,
+// //   reorderLevel,
+// // };
+  
+// formData.append(
+//   "variant",
+//     JSON.stringify(formData)
+// );
+
+
+// const retainedImageIds = images.map((ele) => ele.id); // [8, 11, 2]
+// formData.append("retainedImageIds", JSON.stringify(retainedImageIds));
+
+//   // Only append image if a File was actually selected
+//   if (Array.isArray(images)) {
+//     images.forEach((item) => {
+//         // Handles either a direct File in the array or a { file: File } wrapper
+//         const file = item instanceof File ? item : item?.file;
+//         if (file instanceof File) {
+//         formData.append("images", file);
+//         }
+//     });
+// }
+
+//   const response = await axiosInstance.put(`admin/products/${productId}/variants/${variantId}`, formData, {
+//     headers: {
+//       "Content-Type": "multipart/form-data",
+//     },
+//   });
+
+//   return response?.data;
+// };
 // updateCategoryService
 // createCategoryService

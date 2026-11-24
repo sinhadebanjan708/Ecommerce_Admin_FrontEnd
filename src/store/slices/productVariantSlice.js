@@ -15,8 +15,8 @@ const productVariantSlice = createSlice({
   reducers: {
     storeProductVariantList(state,action){
     //   const response = action.payload?.data;
-      state.productVariantList = action.payload
-      state.totalRecords = action.payload.data?.length || 0;
+      state.productVariantList = action.payload.content
+      state.totalRecords = action.payload.totalElements;
     }
   },
 });
