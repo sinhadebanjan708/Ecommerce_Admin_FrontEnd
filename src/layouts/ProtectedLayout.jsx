@@ -140,6 +140,12 @@ export default function ProtectedLayout() {
               >
                 Product Variant
               </MenuItem>
+              <MenuItem
+                icon={<ArticleOutlined fontSize="small" />}
+                component={<NavLink to="/order-fullfilment" />}
+              >
+               Order Fullfilment
+              </MenuItem>
             </Menu>
           </Box>
 

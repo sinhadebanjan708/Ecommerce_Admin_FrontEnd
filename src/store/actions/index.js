@@ -4,6 +4,7 @@ export * from "./category.action";
 export * from "./subcategory.action";
 export * from "./product.action";
 export * from "./productVariant.action";
+export * from "./orderfullfilment.action";
 // export * from "./login.actions";
 // export * from "./global.actions";
 // export * from "./employeeProfileaction";

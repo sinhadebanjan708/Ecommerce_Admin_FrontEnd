@@ -15,6 +15,7 @@ import NotFound from "../pages/NotFound";
 import Subcategories from "../pages/Subcategory";
 import Product from "../pages/Product";
 import ProductVariant from "../pages/ProductVariant"
+import OrderFullfilment from "../pages/OrderFullfilment"
 
 export default function AppRoutes() {
   return (
@@ -35,6 +36,7 @@ export default function AppRoutes() {
           <Route path="/sub-category" element={<Subcategories />} />
           <Route path="/product" element={<Product />} />
           <Route path="/product-variant" element={<ProductVariant />} />
+          <Route path="/order-fullfilment" element={<OrderFullfilment />} />
         </Route>
       </Route>
 
